@@ -10,6 +10,7 @@ import torch.optim as optim
 from torchvision import models
 from tqdm import tqdm
 import wandb
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 def train_one_epoch(model, dataloader, optimizer, criterion, device, scheduler):
     model.train()
