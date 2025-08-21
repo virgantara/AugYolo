@@ -37,8 +37,12 @@ def main(args):
     CSV_FILE = file_path
 
     transform = transforms.Compose([
-        transforms.Resize((600, 600)),
-        transforms.ToTensor()
+        transforms.Resize((600, 600)),  # or (384, 384)
+        transforms.ToTensor(),
+        transforms.Normalize(
+            mean=[0.485, 0.456, 0.406],  # ImageNet stats
+            std=[0.229, 0.224, 0.225]
+        )
     ])
 
     full_dataset = BoneTumorDataset(csv_path=CSV_FILE, image_dir=IMG_DIR, transform=transform)
