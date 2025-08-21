@@ -141,3 +141,6 @@ if __name__ == "__main__":
     parser.add_argument('--model_path', type=str, default='pretrained/GDANet_ModelNet40_93.4.t7', metavar='N',
                         help='Pretrained model path')
     args = parser.parse_args()
+
+    __init__()
+    main(args)
