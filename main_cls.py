@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import models
 from tqdm import tqdm
+import wandb
 
 def train_one_epoch(model, dataloader, optimizer, criterion, device):
     model.train()
@@ -55,7 +56,17 @@ def validate(model, dataloader, criterion, device):
     return epoch_loss, top1_acc, top5_acc
 
 def main(args):
-
+    wandb.init(
+        project=args.project_name, 
+        name=args.exp_name,
+        config={
+            "epochs": num_epochs,
+            "batch_size": args.batch_size,
+            "lr": args.lr,
+            "architecture": args.model_name,
+            "optimizer": "adam"
+        }
+    )
     BATCH_SIZE = 32
 
     DATASET_DIR = 'data/BTXRD'
@@ -83,6 +94,8 @@ def main(args):
     model.fc = nn.Linear(model.fc.in_features, 3)  # 3 classes: normal, benign, malignant
     model = model.to('cuda' if torch.cuda.is_available() else 'cpu')
 
+    wandb.watch(model)
+
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
@@ -90,6 +103,7 @@ def main(args):
     best_model_state = None
 
     num_epochs = args.epochs
+    wandb_log = {}
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch+1}/{num_epochs}")
 
@@ -99,13 +113,22 @@ def main(args):
         print(f"Train Loss: {train_loss:.4f}")
         print(f"Val Loss: {val_loss:.4f} | Top-1 Acc: {top1_acc:.4f} | Top-5 Acc: {top5_acc:.4f}")
 
+        wandb_log = {
+            "epoch": epoch + 1,
+            "train_loss": train_loss,
+            "val_loss": val_loss,
+            "top1_accuracy": top1_acc,
+            "top5_accuracy": top5_acc,
+        }
+        wandb.log(wandb_log)
+
         if top1_acc > best_top1_acc:
             best_top1_acc = top1_acc
             best_model_state = model.state_dict()
             torch.save(best_model_state, 'best_bonetumor_model.pth')
             print(f"Best model saved at epoch {epoch+1} with Top-1 Acc: {top1_acc:.4f}")
 
-
+    wandb.finish()
 
 def _init_():
     if not os.path.exists('checkpoints'):
@@ -118,6 +141,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='BTXRD Classification')
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
+    parser.add_argument('--model_name', type=str, default='resnet18', metavar='N',
+                        help='Name of the model')
     parser.add_argument('--batch_size', type=int, default=32, metavar='batch_size',
                         help='Size of batch)')
     parser.add_argument('--test_batch_size', type=int, default=32, metavar='batch_size',
@@ -136,8 +161,8 @@ if __name__ == "__main__":
                         help='random seed (default: 1)')
     parser.add_argument('--eval', type=bool,  default=False,
                         help='evaluate the model')
-    parser.add_argument('--num_points', type=int, default=1024,
-                        help='num of points to use')
+    parser.add_argument('--project_name', type=str, default='BTXRD', metavar='N',
+                        help='Name of the Project WANDB')
     parser.add_argument('--model_path', type=str, default='pretrained/GDANet_ModelNet40_93.4.t7', metavar='N',
                         help='Pretrained model path')
     args = parser.parse_args()
