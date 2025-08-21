@@ -12,53 +12,10 @@ from tqdm import tqdm
 import wandb
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-def train_one_epoch(model, dataloader, optimizer, criterion, device, scheduler):
-    model.train()
-    running_loss = 0.0
-
-    for images, labels in tqdm(dataloader, desc="Training"):
-        images, labels = images.to(device), labels.to(device)
-
-        optimizer.zero_grad()
-        outputs = model(images)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-
-        running_loss += loss.item() * images.size(0)
-
-    scheduler.step()
-
-    epoch_loss = running_loss / len(dataloader.dataset)
-    return epoch_loss
-
-def validate(model, dataloader, criterion, device):
-    model.eval()
-    running_loss = 0.0
-    top1_total = 0
-    top5_total = 0
-
-    with torch.no_grad():
-        for images, labels in tqdm(dataloader, desc="Validating"):
-            images, labels = images.to(device), labels.to(device)
-
-            outputs = model(images)
-            loss = criterion(outputs, labels)
-            running_loss += loss.item() * images.size(0)
-
-            top1 = top_k_accuracy(outputs, labels, k=1)
-            top5 = top_k_accuracy(outputs, labels, k=5)
-
-            top1_total += top1
-            top5_total += top5
-
-    epoch_loss = running_loss / len(dataloader.dataset)
-    top1_acc = top1_total / len(dataloader.dataset)
-    top5_acc = top5_total / len(dataloader.dataset)
-
-    return epoch_loss, top1_acc, top5_acc
 
 def main(args):
+    print("Hyper-parameters: {}".format(args.__str__()))
+
     num_epochs = args.epochs
 
     wandb.init(
@@ -109,12 +66,17 @@ def main(args):
     wandb.watch(model)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    if args.use_sgd:
+        print("Use SGD")
+        optimizer = optim.SGD(model.parameters(), lr=args.lr*100, momentum=args.momentum, weight_decay=1e-4)
+    else:
+        print("Use Adam")
+        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
 
     best_top1_acc = 0.0
     best_model_state = None
 
-    scheduler = CosineAnnealingLR(opt, args.epochs, eta_min=args.lr)
+    scheduler = CosineAnnealingLR(optimizer, args.epochs, eta_min=args.lr)
 
     wandb_log = {}
     for epoch in range(num_epochs):
@@ -142,6 +104,54 @@ def main(args):
 
     wandb.finish()
 
+
+def train_one_epoch(model, dataloader, optimizer, criterion, device, scheduler):
+    model.train()
+    running_loss = 0.0
+
+    for images, labels in tqdm(dataloader, desc="Training"):
+        images, labels = images.to(device), labels.to(device)
+
+        optimizer.zero_grad()
+        outputs = model(images)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        running_loss += loss.item() * images.size(0)
+
+    scheduler.step()
+
+    epoch_loss = running_loss / len(dataloader.dataset)
+    return epoch_loss
+
+def validate(model, dataloader, criterion, device):
+
+    model.eval()
+    running_loss = 0.0
+    top1_total = 0
+    top5_total = 0
+
+    with torch.no_grad():
+        for images, labels in tqdm(dataloader, desc="Validating"):
+            images, labels = images.to(device), labels.to(device)
+
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+            running_loss += loss.item() * images.size(0)
+
+            top1 = top_k_accuracy(outputs, labels, k=1)
+            top5 = top_k_accuracy(outputs, labels, k=5)
+
+            top1_total += top1
+            top5_total += top5
+
+    epoch_loss = running_loss / len(dataloader.dataset)
+    top1_acc = top1_total / len(dataloader.dataset)
+    top5_acc = top5_total / len(dataloader.dataset)
+
+    return epoch_loss, top1_acc, top5_acc
+
 def _init_():
     if not os.path.exists('checkpoints'):
         os.makedirs('checkpoints')
@@ -161,8 +171,7 @@ if __name__ == "__main__":
                         help='Size of batch)')
     parser.add_argument('--epochs', type=int, default=300, metavar='N',
                         help='number of episode to train')
-    parser.add_argument('--use_sgd', type=bool, default=True,
-                        help='Use SGD')
+    parser.add_argument('--use_sgd', action='store_true', default=False, help='Use SGD')
     parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
                         help='learning rate (default: 0.001, 0.1 if using sgd)')
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
