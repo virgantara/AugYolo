@@ -40,6 +40,8 @@ def main(args):
     full_dataset = BoneTumorDataset(csv_path=CSV_FILE, image_dir=IMG_DIR, transform=transform)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
+    labels = full_dataset.data['label'].values
+    
     skf = StratifiedKFold(n_splits=k_folds, shuffle=True, random_state=args.seed)
     for fold, (train_idx, test_idx) in enumerate(skf.split(full_dataset.data, labels)):
         wandb.init(
