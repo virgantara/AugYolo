@@ -11,24 +11,16 @@ from torchvision import models
 from tqdm import tqdm
 import wandb
 from torch.optim.lr_scheduler import CosineAnnealingLR
-
+from sklearn.model_selection import StratifiedKFold
 
 def main(args):
     print("Hyper-parameters: {}".format(args.__str__()))
 
     num_epochs = args.epochs
 
-    wandb.init(
-        project=args.project_name, 
-        name=args.exp_name,
-        config={
-            "epochs": num_epochs,
-            "batch_size": args.batch_size,
-            "lr": args.lr,
-            "architecture": args.model_name,
-            "optimizer": "adam"
-        }
-    )
+    k_folds = 5
+    
+    
     BATCH_SIZE = 32
 
     DATASET_DIR = 'data/BTXRD'
@@ -46,67 +38,78 @@ def main(args):
     ])
 
     full_dataset = BoneTumorDataset(csv_path=CSV_FILE, image_dir=IMG_DIR, transform=transform)
-
-    train_size = int(0.8 * len(full_dataset))
-    test_size = len(full_dataset) - train_size
-    train_dataset, test_dataset = random_split(full_dataset, [train_size, test_size])
-
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=args.test_batch_size, shuffle=False)
-
-    model = models.resnet18(pretrained=True)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    model.fc = nn.Linear(model.fc.in_features, 3)  # 3 classes: normal, benign, malignant
-    model = model.to('cuda' if torch.cuda.is_available() else 'cpu')
 
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-    print(f"Total parameters: {total_params / 1e6:.2f}M")
-    print(f"Trainable parameters: {trainable_params / 1e6:.2f}M")
+    
+    skf = StratifiedKFold(n_splits=k_folds, shuffle=True, random_state=args.seed)
+    for fold, (train_idx, test_idx) in enumerate(skf.split(full_dataset.data, labels)):
+        wandb.init(
+            project=args.project_name, 
+            name=f"{args.exp_name}_fold{fold+1}",
+            config={
+                "epochs": num_epochs,
+                "batch_size": args.batch_size,
+                "lr": args.lr,
+                "architecture": args.model_name,
+                "optimizer": "adam",
+                "fold": fold + 1
+            }
+        )
 
+        wandb_log = {}  
 
-    wandb.watch(model)
+        train_subset = torch.utils.data.Subset(full_dataset, train_idx)
+        test_subset = torch.utils.data.Subset(full_dataset, test_idx)
 
-    criterion = nn.CrossEntropyLoss()
-    if args.use_sgd:
-        print("Use SGD")
-        optimizer = optim.SGD(model.parameters(), lr=args.lr*100, momentum=args.momentum, weight_decay=1e-4)
-    else:
-        print("Use Adam")
-        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
+        train_loader = DataLoader(train_subset, batch_size=args.batch_size, shuffle=True)
+        test_loader = DataLoader(test_subset, batch_size=args.test_batch_size, shuffle=False)
 
-    best_top1_acc = 0.0
-    best_model_state = None
+        # Model definition
+        model = models.resnet18(pretrained=True)
+        model.fc = nn.Linear(model.fc.in_features, 3)
+        model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
-    scheduler = CosineAnnealingLR(optimizer, args.epochs, eta_min=args.lr)
+        print(f"Total parameters: {sum(p.numel() for p in model.parameters()) / 1e6:.2f}M")
+        print(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M")
 
-    wandb_log = {}
-    for epoch in range(num_epochs):
-        print(f"\nEpoch {epoch+1}/{num_epochs}")
+        wandb.watch(model)
 
-        train_loss = train_one_epoch(model, train_loader, optimizer, criterion, device, scheduler)
-        val_loss, top1_acc, top5_acc = validate(model, test_loader, criterion, device)
-        print(f"Train Loss: {train_loss:.4f}")
-        print(f"Val Loss: {val_loss:.4f} | Top-1 Acc: {top1_acc:.4f} | Top-5 Acc: {top5_acc:.4f}")
+        criterion = nn.CrossEntropyLoss()
+        optimizer = (optim.SGD(model.parameters(), lr=args.lr*100, momentum=args.momentum, weight_decay=1e-4)
+                     if args.use_sgd else
+                     optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4))
+        
+        scheduler = CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=args.lr)
 
-        wandb_log = {
-            "epoch": epoch + 1,
-            "train_loss": train_loss,
-            "val_loss": val_loss,
-            "top1_accuracy": top1_acc,
-            "top5_accuracy": top5_acc,
-        }
-        wandb.log(wandb_log)
+        best_top1_acc = 0.0
+        best_model_state = None
+        for epoch in range(num_epochs):
+            print(f"\nEpoch {epoch+1}/{num_epochs}")
 
-        if top1_acc > best_top1_acc:
-            best_top1_acc = top1_acc
-            best_model_state = model.state_dict()
-            torch.save(best_model_state, 'best_bonetumor_model.pth')
-            print(f"Best model saved at epoch {epoch+1} with Top-1 Acc: {top1_acc:.4f}")
+            train_loss = train_one_epoch(model, train_loader, optimizer, criterion, device, scheduler)
+            val_loss, top1_acc, top5_acc = validate(model, test_loader, criterion, device)
+            print(f"Train Loss: {train_loss:.4f}")
+            print(f"Val Loss: {val_loss:.4f} | Top-1 Acc: {top1_acc:.4f} | Top-5 Acc: {top5_acc:.4f}")
 
-    wandb.finish()
+            wandb_log = {
+                "epoch": epoch + 1,
+                "train_loss": train_loss,
+                "val_loss": val_loss,
+                "top1_accuracy": top1_acc,
+                "top5_accuracy": top5_acc,
+            }
+            wandb.log(wandb_log)
+
+            if top1_acc > best_top1_acc:
+                best_top1_acc = top1_acc
+                best_model_state = model.state_dict()
+                torch.save(best_model_state, f'best_model_fold{fold+1}.pth')
+                print(f"Best model saved at epoch {epoch+1} with Top-1 Acc: {top1_acc:.4f}")
+
+        wandb.finish()
 
 
 def train_one_epoch(model, dataloader, optimizer, criterion, device, scheduler):
