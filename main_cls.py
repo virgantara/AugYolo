@@ -142,5 +142,5 @@ if __name__ == "__main__":
                         help='Pretrained model path')
     args = parser.parse_args()
 
-    __init__()
+    _init_()
     main(args)
