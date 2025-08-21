@@ -11,7 +11,7 @@ from torchvision import models
 from tqdm import tqdm
 import wandb
 
-def train_one_epoch(model, dataloader, optimizer, criterion, device):
+def train_one_epoch(model, dataloader, optimizer, criterion, device, scheduler):
     model.train()
     running_loss = 0.0
 
@@ -25,6 +25,8 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device):
         optimizer.step()
 
         running_loss += loss.item() * images.size(0)
+
+    scheduler.step()
 
     epoch_loss = running_loss / len(dataloader.dataset)
     return epoch_loss
@@ -56,6 +58,8 @@ def validate(model, dataloader, criterion, device):
     return epoch_loss, top1_acc, top5_acc
 
 def main(args):
+    num_epochs = args.epochs
+
     wandb.init(
         project=args.project_name, 
         name=args.exp_name,
@@ -94,6 +98,13 @@ def main(args):
     model.fc = nn.Linear(model.fc.in_features, 3)  # 3 classes: normal, benign, malignant
     model = model.to('cuda' if torch.cuda.is_available() else 'cpu')
 
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+    print(f"Total parameters: {total_params / 1e6:.2f}M")
+    print(f"Trainable parameters: {trainable_params / 1e6:.2f}M")
+
+
     wandb.watch(model)
 
     criterion = nn.CrossEntropyLoss()
@@ -102,14 +113,14 @@ def main(args):
     best_top1_acc = 0.0
     best_model_state = None
 
-    num_epochs = args.epochs
+    scheduler = CosineAnnealingLR(opt, args.epochs, eta_min=args.lr)
+
     wandb_log = {}
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch+1}/{num_epochs}")
 
-        train_loss = train_one_epoch(model, train_loader, optimizer, criterion, device)
+        train_loss = train_one_epoch(model, train_loader, optimizer, criterion, device, scheduler)
         val_loss, top1_acc, top5_acc = validate(model, test_loader, criterion, device)
-
         print(f"Train Loss: {train_loss:.4f}")
         print(f"Val Loss: {val_loss:.4f} | Top-1 Acc: {top1_acc:.4f} | Top-5 Acc: {top5_acc:.4f}")
 
