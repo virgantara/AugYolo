@@ -69,11 +69,7 @@ def main(args):
     )
 
     wandb_log = {}  
-
-    train_loader = DataLoader(train_subset, batch_size=args.batch_size, shuffle=True)
-    test_loader = DataLoader(test_subset, batch_size=args.test_batch_size, shuffle=False)
-
-    # Model definition
+  
     model = YOLOv8nCls(num_classes=3)
     
     model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
