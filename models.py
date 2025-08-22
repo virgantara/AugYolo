@@ -106,20 +106,27 @@ class YOLOv8nCls(nn.Module):
 
         return self.head(x)
 
-    def _load_pretrained_backbone(self, checkpoint_path):
-        print(f"Loading pretrained weights from {checkpoint_path}")
-        state_dict = torch.load(checkpoint_path, map_location='cpu')
+    def _load_pretrained_weights(self, checkpoint_path):
+        print(f"Loading weights from {checkpoint_path}")
+        ckpt = torch.load(checkpoint_path, map_location='cpu')
+        
+        # Ultralytics yolov8n-cls.pt structure
+        if 'model' in ckpt:
+            state_dict = ckpt['model'].float().state_dict()
+        elif isinstance(ckpt, dict) and 'state_dict' in ckpt:
+            state_dict = ckpt['state_dict']
+        elif isinstance(ckpt, dict):
+            state_dict = ckpt
+        else:
+            raise ValueError("Checkpoint format not recognized.")
 
-        # If checkpoint contains full model
-        if 'model' in state_dict:
-            state_dict = state_dict['model']
-
-        # Filter keys not belonging to the head
-        filtered_state_dict = {
+        # Filter only layers that exist in this model (and skip head)
+        filtered_dict = {
             k: v for k, v in state_dict.items()
-            if 'head' not in k and k in self.state_dict()
+            if k in self.state_dict() and not k.startswith("head")
         }
 
-        missing, unexpected = self.load_state_dict(filtered_state_dict, strict=False)
-        print(f"Loaded with missing keys: {missing}")
-        print(f"Unexpected keys: {unexpected}")
+        missing_keys, unexpected_keys = self.load_state_dict(filtered_dict, strict=False)
+        print(f"Loaded with {len(filtered_dict)} layers.")
+        print(f"Missing keys: {missing_keys}")
+        print(f"Unexpected keys: {unexpected_keys}")
