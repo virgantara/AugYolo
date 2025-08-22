@@ -7,7 +7,7 @@ from models_lib import ConvBNAct as Conv, C2f, ClassifyHead as Classify
 
 import torch
 import torch.nn as nn
-from torchvision.models import convnext_tiny, convnext_base, convnext_large, convnext_xlarge
+from torchvision.models import convnext_tiny, convnext_base
 
 class ConvNeXtBTXRD(nn.Module):
     def __init__(self, num_classes):
