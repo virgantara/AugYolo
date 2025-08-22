@@ -7,12 +7,13 @@ from models_lib import ConvBNAct as Conv, C2f, ClassifyHead as Classify
 
 import torch
 import torch.nn as nn
-from torchvision.models import convnext_tiny, convnext_base
+from torchvision.models import convnext_tiny, convnext_base, ConvNeXt_Base_Weights
 
 class ConvNeXtBTXRD(nn.Module):
     def __init__(self, num_classes):
         super(ConvNeXtBTXRD, self).__init__()
-        self.backbone = convnext_base(pretrained=True)  # You can change to convnext_small/base/large
+        weights = ConvNeXt_Base_Weights.DEFAULT
+        self.backbone = convnext_base(weights=weights)  # You can change to convnext_small/base/large
 
         # Replace the classifier (head)
         in_features = self.backbone.classifier[2].in_features
