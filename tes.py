@@ -102,3 +102,13 @@ class YOLOv8nCls(nn.Module):
         x = self.stage4(x)
 
         return self.head(x)
+
+
+if __name__ == "__main__":
+    model = YOLOv8nCls(num_classes=3)
+    dummy_input = torch.randn(2, 3, 608, 608)
+    out = model(dummy_input)
+    print(model)
+    print("Output shape:", out.shape)
+    print(f"Total parameters: {sum(p.numel() for p in model.parameters()) / 1e6:.2f}M")
+    print(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M")
