@@ -1,123 +1,87 @@
+import yaml
 import torch
 import torch.nn as nn
+from pathlib import Path
 
+from models_lib import ConvBNAct as Conv, C2f, ClassifyHead as Classify
 
-class ConvBNAct(nn.Module):
-    def __init__(self, in_channels, out_channels, k=3, s=1, p=None, act=True):
+module_map = {
+    'Conv': Conv,
+    'C2f': C2f,
+    'Classify': Classify,
+}
+
+def make_divisible(x, divisor):
+    return int((x + divisor / 2) // divisor * divisor)
+
+class YOLOv8ClsFromYAML(nn.Module):
+    def __init__(self, yaml_path='yolov8n-cls.yaml', scale='n', num_classes=None, pretrained=None):
         super().__init__()
-        if p is None:
-            p = k // 2
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=k, stride=s, padding=p, bias=False)
-        self.bn = nn.BatchNorm2d(out_channels)
-        self.act = nn.SiLU() if act else nn.Identity()
+        with open(yaml_path, 'r') as f:
+            cfg = yaml.safe_load(f)
 
-    def forward(self, x):
-        return self.act(self.bn(self.conv(x)))
+        # Scaling
+        depth, width, max_channels = cfg['scales'][scale]
+        backbone, head = cfg['backbone'], cfg['head']
+        nc = num_classes if num_classes is not None else cfg['nc']
 
+        self.model = self.build_model(backbone + head, depth, width, max_channels, nc)
 
-class Bottleneck(nn.Module):
-    def __init__(self, c1, c2, shortcut=True):
-        super().__init__()
-        self.cv1 = ConvBNAct(c1, c2, k=1, s=1, p=0)
-        self.cv2 = ConvBNAct(c2, c2, k=3, s=1, p=1)
-        self.add = shortcut and c1 == c2
+        if pretrained:
+            self._load_pretrained_weights(pretrained)
 
-    def forward(self, x):
-        y = self.cv2(self.cv1(x))
-        return x + y if self.add else y
+    def build_model(self, layers_cfg, depth_mul, width_mul, max_ch, nc):
+        layers = []
+        ch = [3]  # track channels of outputs
+        for i, (from_idx, repeat, module_name, args) in enumerate(layers_cfg):
+            module = module_map[module_name]
 
+            # Adjust width and depth
+            if module_name == 'C2f':
+                c1 = ch[from_idx]
+                c2 = args[0]
+                shortcut = args[1] if len(args) > 1 else True
+                c2 = make_divisible(c2 * width_mul, 8)
+                repeat = max(round(repeat * depth_mul), 1)
+                m = module(c1, c2, n=repeat, shortcut=shortcut)
+            elif module_name == 'Conv':
+                c2 = make_divisible(args[0] * width_mul, 8)
+                k = args[1]
+                s = args[2]
+                c1 = ch[from_idx]
+                m = module(c1, c2, k=k, s=s)
+            elif module_name == 'Classify':
+                in_c = ch[from_idx]
+                m = module(in_c, nc)
+            else:
+                raise NotImplementedError(f"Module {module_name} not implemented")
 
-class C2f(nn.Module):
-    """
-    Ultralytics-style C2f block.
-    Concats: [y1, y2 (pre-block), y2_1, ..., y2_n] → fuse
-    So final input to cv2 has (n+2)*hidden channels.
-    """
-    def __init__(self, in_channels, out_channels, n=1, e=0.5, shortcut=True):
-        super().__init__()
-        hidden = int(out_channels * e)
-        self.cv1 = ConvBNAct(in_channels, hidden * 2, k=1, s=1, p=0)
-        self.blocks = nn.ModuleList([Bottleneck(hidden, hidden, shortcut) for _ in range(n)])
-        self.cv2 = ConvBNAct(hidden * (n + 2), out_channels, k=1, s=1, p=0)
+            layers.append(m)
+            ch.append(m.out_channels if hasattr(m, 'out_channels') else c2 if module_name != 'Classify' else nc)
 
-    def forward(self, x):
-        y1, y2 = self.cv1(x).chunk(2, dim=1)
-        outputs = [y1, y2]
-        for m in self.blocks:
-            y2 = m(y2)
-            outputs.append(y2)
-        return self.cv2(torch.cat(outputs, dim=1))
-
-
-class ClassifyHead(nn.Module):
-    def __init__(self, in_channels, num_classes):
-        super().__init__()
-        self.pool = nn.AdaptiveAvgPool2d(1)
-        self.flatten = nn.Flatten()
-        self.fc1 = nn.Linear(in_channels, 1280)
-        self.bn = nn.BatchNorm1d(1280)
-        self.act = nn.SiLU()
-        self.drop = nn.Dropout(0.0)
-        self.fc2 = nn.Linear(1280, num_classes)
-
-    def forward(self, x):
-        x = self.pool(x)
-        x = self.flatten(x)
-        x = self.fc1(x)
-        x = self.bn(x)
-        x = self.act(x)
-        x = self.drop(x)
-        return self.fc2(x)
-
-class YOLOv8nCls(nn.Module):
-    def __init__(self, num_classes=3, pretrained=False, checkpoint_path=None):
-        super().__init__()
-
-        layers = [
-            ConvBNAct(3, 16, k=3, s=2),                   # model.0
-            ConvBNAct(16, 32, k=3, s=2),                  # model.1
-            C2f(32, 32, n=1, e=1.0),                      # model.2
-            ConvBNAct(32, 64, k=3, s=2),                  # model.3
-            C2f(64, 64, n=2, e=1.0),                      # model.4
-            ConvBNAct(64, 128, k=3, s=2),                 # model.5
-            C2f(128, 128, n=2, e=1.0),                    # model.6
-            ConvBNAct(128, 256, k=3, s=2),                # model.7
-            C2f(256, 256, n=1, e=1.0),                    # model.8
-            ClassifyHead(256, num_classes),              # model.9
-        ]
-
-        self.model = nn.Sequential(*layers)
-
-        if pretrained and checkpoint_path:
-            self._load_pretrained_weights(checkpoint_path)
+        return nn.Sequential(*layers)
 
     def forward(self, x):
         return self.model(x)
 
     def _load_pretrained_weights(self, checkpoint_path):
-	    print(f"Loading weights from {checkpoint_path}")
-	    ckpt = torch.load(checkpoint_path, map_location='cpu')
+        print(f"Loading weights from {checkpoint_path}")
+        ckpt = torch.load(checkpoint_path, map_location='cpu')
 
-	    if 'model' in ckpt and hasattr(ckpt['model'], 'model'):
-	        pretrained_dict = ckpt['model'].model.state_dict()
-	    else:
-	        raise ValueError("Unsupported checkpoint format")
+        if 'model' in ckpt and hasattr(ckpt['model'], 'model'):
+            pretrained_dict = ckpt['model'].model.state_dict()
+        else:
+            raise ValueError("Unsupported checkpoint format")
 
-	    # Strip "model." prefix from all keys
-	    new_pretrained_dict = {}
-	    for k, v in pretrained_dict.items():
-	        if k.startswith("model."):
-	            new_key = k[len("model."):]
-	        else:
-	            new_key = k
-	        new_pretrained_dict[new_key] = v
+        # Strip 'model.' prefix
+        new_pretrained_dict = {}
+        for k, v in pretrained_dict.items():
+            if k.startswith("model."):
+                new_key = k[len("model."):]
+            else:
+                new_key = k
+            new_pretrained_dict[new_key] = v
 
-	    # Load into your model
-	    missing_keys, unexpected_keys = self.model.load_state_dict(new_pretrained_dict, strict=False)
-
-	    print(f" Loaded {len(new_pretrained_dict)} layers.")
-	    print(f" Missing keys: {len(missing_keys)}")
-	    for k in missing_keys[:10]:
-	        print(" -", k)
-
-
+        missing, unexpected = self.model.load_state_dict(new_pretrained_dict, strict=False)
+        print(f"✅ Loaded {len(new_pretrained_dict)} layers.")
+        print(f"❌ Missing: {len(missing)} | ⚠️ Unexpected: {len(unexpected)}")

@@ -83,7 +83,12 @@ def main(args):
 
     wandb_log = {}  
   
-    model = YOLOv8nCls(num_classes=3, pretrained=True, checkpoint_path=args.pretrain_path)
+    model = YOLOv8ClsFromYAML(
+        yaml_path='yolov8-cls.yaml',
+        scale='n',
+        num_classes=3,
+        pretrained=args.pretrain_path
+    )
     
     model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
