@@ -4,6 +4,7 @@ from torch.utils.data import Dataset
 from PIL import Image
 import os
 from torchvision import transforms
+from torchvision.transforms import ToTensor
 
 def encode_label(row):
     """
@@ -54,5 +55,7 @@ class BoneTumorDataset(Dataset):
 
         if self.transform:
             image = self.transform(image)
+        else:
+            image = ToTensor()(image)  # ensure tensor even if no transform
 
         return image, row['label']
