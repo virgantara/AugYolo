@@ -95,18 +95,29 @@ class YOLOv8nCls(nn.Module):
         return self.model(x)
 
     def _load_pretrained_weights(self, checkpoint_path):
-        print(f"Loading weights from {checkpoint_path}")
-        ckpt = torch.load(checkpoint_path, map_location='cpu')
+	    print(f"Loading weights from {checkpoint_path}")
+	    ckpt = torch.load(checkpoint_path, map_location='cpu')
 
-        if 'model' in ckpt and hasattr(ckpt['model'], 'model'):
-            pretrained_dict = ckpt['model'].model.state_dict()
-        else:
-            raise ValueError("Unsupported checkpoint format")
+	    if 'model' in ckpt and hasattr(ckpt['model'], 'model'):
+	        pretrained_dict = ckpt['model'].model.state_dict()
+	    else:
+	        raise ValueError("Unsupported checkpoint format")
 
-        missing_keys, unexpected_keys = self.model.load_state_dict(pretrained_dict, strict=False)
+	    # Strip "model." prefix from all keys
+	    new_pretrained_dict = {}
+	    for k, v in pretrained_dict.items():
+	        if k.startswith("model."):
+	            new_key = k[len("model."):]
+	        else:
+	            new_key = k
+	        new_pretrained_dict[new_key] = v
 
-        print(f"✅ Loaded {len(pretrained_dict)} layers.")
-        print(f"❌ Missing keys: {len(missing_keys)}")
-        for k in missing_keys[:10]:
-            print(" -", k)
+	    # Load into your model
+	    missing_keys, unexpected_keys = self.model.load_state_dict(new_pretrained_dict, strict=False)
+
+	    print(f" Loaded {len(new_pretrained_dict)} layers.")
+	    print(f" Missing keys: {len(missing_keys)}")
+	    for k in missing_keys[:10]:
+	        print(" -", k)
+
 
