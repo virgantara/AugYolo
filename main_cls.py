@@ -11,7 +11,7 @@ from torchvision import models
 from tqdm import tqdm
 import wandb
 from torch.optim.lr_scheduler import CosineAnnealingLR
-from models import YOLOv8ClsFromYAML, ConvNeXtBTXRD
+from models import YOLOv8ClsFromYAML, ConvNeXtBTXRD, EfficientNetBTXRD
 import random
 import numpy as np
 
@@ -95,6 +95,9 @@ def main(args):
 
     elif args.model_name == 'convnext':
         model = ConvNeXtBTXRD(num_classes=3)
+
+    elif args.model_name == 'efficientnet':
+        model = EfficientNetBTXRD(num_classes=3)
     
     model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 

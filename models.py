@@ -7,7 +7,7 @@ from models_lib import ConvBNAct as Conv, C2f, ClassifyHead as Classify
 
 import torch
 import torch.nn as nn
-from torchvision.models import convnext_tiny, convnext_base, ConvNeXt_Tiny_Weights
+from torchvision.models import convnext_tiny, convnext_base, ConvNeXt_Tiny_Weights, efficientnet_b0, EfficientNet_B0_Weights 
 
 class ConvNeXtBTXRD(nn.Module):
     def __init__(self, num_classes):
@@ -28,6 +28,21 @@ class ConvNeXtBTXRD(nn.Module):
     def forward(self, x):
         return self.backbone(x)
 
+class EfficientNetBTXRD(nn.Module):
+    def __init__(self, num_classes):
+        super(EfficientNetBTXRD, self).__init__()
+        weights = EfficientNet_B0_Weights.DEFAULT
+        self.backbone = efficientnet_b0(weights=weights)
+
+        # Replace classifier
+        in_features = self.backbone.classifier[1].in_features
+        self.backbone.classifier = nn.Sequential(
+            nn.Dropout(p=0.2, inplace=True),
+            nn.Linear(in_features, num_classes)
+        )
+
+    def forward(self, x):
+        return self.backbone(x)
 
 module_map = {
     'Conv': Conv,
