@@ -110,29 +110,40 @@ class YOLOv8nCls(nn.Module):
 	    print(f"Loading weights from {checkpoint_path}")
 	    ckpt = torch.load(checkpoint_path, map_location='cpu')
 
-	    # For Ultralytics YOLOv8 .pt format
 	    if 'model' in ckpt and hasattr(ckpt['model'], 'model'):
 	        pretrained_dict = ckpt['model'].model.state_dict()
-	    elif 'model' in ckpt:
-	        pretrained_dict = ckpt['model'].state_dict()
 	    else:
-	        raise ValueError("Unrecognized checkpoint format")
+	        raise ValueError("Unsupported checkpoint format")
 
 	    model_dict = self.state_dict()
 
-	    # Rename keys to match your model (remove "model." prefix)
+	    # Map Ultralytics numeric layers to your named modules
+	    prefix_map = {
+	        'model.0': 'stem',
+	        'model.1': 'down0',
+	        'model.2': 'stage1',
+	        'model.3': 'down1',
+	        'model.4': 'stage2',
+	        'model.5': 'down2',
+	        'model.6': 'stage3',
+	        'model.7': 'down3',
+	        'model.8': 'stage4',
+	        # model.9 is the head — ignore
+	    }
+
 	    mapped_pretrained = {}
 	    for k, v in pretrained_dict.items():
-	        new_key = k
-	        if new_key.startswith('model.'):
-	            new_key = new_key[len('model.'):]
-	        if new_key in model_dict and model_dict[new_key].shape == v.shape:
-	            mapped_pretrained[new_key] = v
+	        for ul_prefix, my_prefix in prefix_map.items():
+	            if k.startswith(ul_prefix):
+	                new_key = k.replace(ul_prefix, my_prefix, 1)
+	                if new_key in model_dict and model_dict[new_key].shape == v.shape:
+	                    mapped_pretrained[new_key] = v
+	                break
 
-	    # Load only matching weights
 	    missing_keys, unexpected_keys = self.load_state_dict(mapped_pretrained, strict=False)
 
 	    print(f"Loaded {len(mapped_pretrained)} layers.")
-	    print(f"Missing keys: {missing_keys}")
+	    print(f"Missing keys: {len(missing_keys)}")
 	    print(f"Unexpected keys: {unexpected_keys}")
+
 
