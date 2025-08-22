@@ -88,7 +88,7 @@ class YOLOv8nCls(nn.Module):
         self.head = ClassifyHead(256, num_classes)
 
         if pretrained and checkpoint_path:
-            self._load_pretrained_backbone(checkpoint_path)
+            self._load_pretrained_weights(checkpoint_path)
 
     def forward(self, x):
         x = self.stem(x)
