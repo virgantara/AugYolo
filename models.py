@@ -69,93 +69,44 @@ class ClassifyHead(nn.Module):
         x = self.drop(x)
         return self.fc2(x)
 
-
 class YOLOv8nCls(nn.Module):
     def __init__(self, num_classes=3, pretrained=False, checkpoint_path=None):
         super().__init__()
-        self.stem   = ConvBNAct(3, 16, k=3, s=2)
-        self.down0  = ConvBNAct(16, 32, k=3, s=2)
-        
-        self.stage1 = C2f(32, 32, n=1, e=1.0)
-        self.stage2 = C2f(64, 64, n=2, e=1.0)
-        self.stage3 = C2f(128, 128, n=2, e=1.0)
-        self.stage4 = C2f(256, 256, n=1, e=1.0)
 
-        self.down1  = ConvBNAct(32, 64, k=3, s=2)
-        self.down2  = ConvBNAct(64, 128, k=3, s=2)
-        self.down3  = ConvBNAct(128, 256, k=3, s=2)
+        layers = [
+            ConvBNAct(3, 16, k=3, s=2),                   # model.0
+            ConvBNAct(16, 32, k=3, s=2),                  # model.1
+            C2f(32, 32, n=1, e=1.0),                      # model.2
+            ConvBNAct(32, 64, k=3, s=2),                  # model.3
+            C2f(64, 64, n=2, e=1.0),                      # model.4
+            ConvBNAct(64, 128, k=3, s=2),                 # model.5
+            C2f(128, 128, n=2, e=1.0),                    # model.6
+            ConvBNAct(128, 256, k=3, s=2),                # model.7
+            C2f(256, 256, n=1, e=1.0),                    # model.8
+            ClassifyHead(256, num_classes),              # model.9
+        ]
 
-        self.head = ClassifyHead(256, num_classes)
+        self.model = nn.Sequential(*layers)
 
         if pretrained and checkpoint_path:
             self._load_pretrained_weights(checkpoint_path)
 
     def forward(self, x):
-        x = self.stem(x)
-        x = self.down0(x)
-        x = self.stage1(x)
-
-        x = self.down1(x)
-        x = self.stage2(x)
-
-        x = self.down2(x)
-        x = self.stage3(x)
-
-        x = self.down3(x)
-        x = self.stage4(x)
-
-        return self.head(x)
+        return self.model(x)
 
     def _load_pretrained_weights(self, checkpoint_path):
-	    print(f"Loading weights from {checkpoint_path}")
-	    ckpt = torch.load(checkpoint_path, map_location='cpu')
+        print(f"Loading weights from {checkpoint_path}")
+        ckpt = torch.load(checkpoint_path, map_location='cpu')
 
-	    # Ultralytics format: ckpt['model'].model.state_dict()
-	    if 'model' in ckpt and hasattr(ckpt['model'], 'model'):
-	        pretrained_dict = ckpt['model'].model.state_dict()
-	    else:
-	        raise ValueError("Unsupported checkpoint format")
+        if 'model' in ckpt and hasattr(ckpt['model'], 'model'):
+            pretrained_dict = ckpt['model'].model.state_dict()
+        else:
+            raise ValueError("Unsupported checkpoint format")
 
-	    model_dict = self.state_dict()
+        missing_keys, unexpected_keys = self.model.load_state_dict(pretrained_dict, strict=False)
 
-	    # Mapping from Ultralytics model index to your named modules
-	    prefix_map = {
-	        'model.0': 'stem',
-	        'model.1': 'down0',
-	        'model.2': 'stage1',
-	        'model.3': 'down1',
-	        'model.4': 'stage2',
-	        'model.5': 'down2',
-	        'model.6': 'stage3',
-	        'model.7': 'down3',
-	        'model.8': 'stage4',
-	        # model.9 = head (ignored)
-	    }
-
-	    mapped_pretrained = {}
-	    for k, v in pretrained_dict.items():
-	        if not k.startswith('model.'):
-	            continue
-	        parts = k.split('.', 2)  # ['model', 'model.0', 'conv.weight'] → WRONG
-	        # So fix to split after "model.model"
-	        if k.startswith("model.model."):
-	            sub_parts = k[len("model.model."):].split('.', 1)
-	            if len(sub_parts) != 2:
-	                continue
-	            block_id, subkey = sub_parts
-	            ul_prefix = f"model.{block_id}"
-	            if ul_prefix in prefix_map:
-	                new_key = f"{prefix_map[ul_prefix]}.{subkey}"
-	                if new_key in model_dict and model_dict[new_key].shape == v.shape:
-	                    mapped_pretrained[new_key] = v
-
-	    missing_keys, unexpected_keys = self.load_state_dict(mapped_pretrained, strict=False)
-
-	    print(f"✅ Loaded {len(mapped_pretrained)} layers.")
-	    print(f"❌ Missing keys: {len(missing_keys)}")
-	    for k in missing_keys[:10]:
-	        print(" -", k)
-
-
-
+        print(f"✅ Loaded {len(pretrained_dict)} layers.")
+        print(f"❌ Missing keys: {len(missing_keys)}")
+        for k in missing_keys[:10]:
+            print(" -", k)
 
