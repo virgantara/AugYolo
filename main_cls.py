@@ -24,8 +24,7 @@ def main(args):
     train_path = os.path.join(DATASET_DIR, 'train.xlsx')
     test_path = os.path.join(DATASET_DIR, 'val.xlsx')  
     IMG_DIR = os.path.join(DATASET_DIR, 'images')
-    CSV_FILE = file_path
-
+    
     transform = transforms.Compose([
         transforms.Resize((600, 600)),  # or (384, 384)
         transforms.RandomHorizontalFlip(),
