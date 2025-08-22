@@ -11,7 +11,6 @@ from torchvision import models
 from tqdm import tqdm
 import wandb
 from torch.optim.lr_scheduler import CosineAnnealingLR
-from sklearn.model_selection import StratifiedKFold
 from models import YOLOv8nCls
 
 def main(args):
@@ -19,10 +18,11 @@ def main(args):
 
     num_epochs = args.epochs
 
-    k_folds = 5
     
     DATASET_DIR = 'data/BTXRD'
-    file_path = os.path.join(DATASET_DIR, 'dataset.xlsx')  
+    metadata_xlsx_path = os.path.join(DATASET_DIR, 'dataset.xlsx')
+    train_path = os.path.join(DATASET_DIR, 'train.xlsx')
+    test_path = os.path.join(DATASET_DIR, 'val.xlsx')  
     IMG_DIR = os.path.join(DATASET_DIR, 'images')
     CSV_FILE = file_path
 
@@ -38,78 +38,85 @@ def main(args):
         )
     ])
 
-    full_dataset = BoneTumorDataset(csv_path=CSV_FILE, image_dir=IMG_DIR, transform=transform)
+    train_dataset = BoneTumorDataset(
+        split_xlsx_path=train_path,
+        metadata_xlsx_path=metadata_xlsx_path,
+        image_dir=IMG_DIR,  # make sure this exists
+        transform=transform
+    )
+
+    test_dataset = BoneTumorDataset(
+        split_xlsx_path=test_path,
+        metadata_xlsx_path=metadata_xlsx_path,
+        image_dir=IMG_DIR
+    )
+
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=args.test_batch_size, shuffle=False)
+
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    labels = full_dataset.data['label'].values
+    wandb.init(
+        project=args.project_name, 
+        name=f"{args.exp_name}",
+        config={
+            "epochs": num_epochs,
+            "batch_size": args.batch_size,
+            "lr": args.lr,
+            "architecture": args.model_name,
+            "optimizer": "adam"
+        }
+    )
 
-    skf = StratifiedKFold(n_splits=k_folds, shuffle=True, random_state=args.seed)
-    for fold, (train_idx, test_idx) in enumerate(skf.split(full_dataset.data, labels)):
-        wandb.init(
-            project=args.project_name, 
-            name=f"{args.exp_name}_fold{fold+1}",
-            config={
-                "epochs": num_epochs,
-                "batch_size": args.batch_size,
-                "lr": args.lr,
-                "architecture": args.model_name,
-                "optimizer": "adam",
-                "fold": fold + 1
-            }
-        )
+    wandb_log = {}  
 
-        wandb_log = {}  
+    train_loader = DataLoader(train_subset, batch_size=args.batch_size, shuffle=True)
+    test_loader = DataLoader(test_subset, batch_size=args.test_batch_size, shuffle=False)
 
-        train_subset = torch.utils.data.Subset(full_dataset, train_idx)
-        test_subset = torch.utils.data.Subset(full_dataset, test_idx)
+    # Model definition
+    model = YOLOv8nCls(num_classes=3)
+    
+    model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
-        train_loader = DataLoader(train_subset, batch_size=args.batch_size, shuffle=True)
-        test_loader = DataLoader(test_subset, batch_size=args.test_batch_size, shuffle=False)
+    print(f"Total parameters: {sum(p.numel() for p in model.parameters()) / 1e6:.2f}M")
+    print(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M")
 
-        # Model definition
-        model = YOLOv8nCls(num_classes=3)
-        
-        model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+    wandb.watch(model)
 
-        print(f"Total parameters: {sum(p.numel() for p in model.parameters()) / 1e6:.2f}M")
-        print(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M")
+    criterion = nn.CrossEntropyLoss()
+    optimizer = (optim.SGD(model.parameters(), lr=args.lr*100, momentum=args.momentum, weight_decay=1e-4)
+                 if args.use_sgd else
+                 optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4))
+    
+    scheduler = CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=args.lr)
 
-        wandb.watch(model)
+    best_top1_acc = 0.0
+    best_model_state = None
+    for epoch in range(num_epochs):
+        print(f"\nEpoch {epoch+1}/{num_epochs}")
 
-        criterion = nn.CrossEntropyLoss()
-        optimizer = (optim.SGD(model.parameters(), lr=args.lr*100, momentum=args.momentum, weight_decay=1e-4)
-                     if args.use_sgd else
-                     optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4))
-        
-        scheduler = CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=args.lr)
+        train_loss = train_one_epoch(model, train_loader, optimizer, criterion, device, scheduler)
+        val_loss, top1_acc, top5_acc = validate(model, test_loader, criterion, device)
+        print(f"Train Loss: {train_loss:.4f}")
+        print(f"Val Loss: {val_loss:.4f} | Top-1 Acc: {top1_acc:.4f} | Top-5 Acc: {top5_acc:.4f}")
 
-        best_top1_acc = 0.0
-        best_model_state = None
-        for epoch in range(num_epochs):
-            print(f"\nEpoch {epoch+1}/{num_epochs}")
+        wandb_log = {
+            "epoch": epoch + 1,
+            "train_loss": train_loss,
+            "val_loss": val_loss,
+            "top1_accuracy": top1_acc,
+            "top5_accuracy": top5_acc,
+        }
+        wandb.log(wandb_log)
 
-            train_loss = train_one_epoch(model, train_loader, optimizer, criterion, device, scheduler)
-            val_loss, top1_acc, top5_acc = validate(model, test_loader, criterion, device)
-            print(f"Train Loss: {train_loss:.4f}")
-            print(f"Val Loss: {val_loss:.4f} | Top-1 Acc: {top1_acc:.4f} | Top-5 Acc: {top5_acc:.4f}")
+        if top1_acc > best_top1_acc:
+            best_top1_acc = top1_acc
+            best_model_state = model.state_dict()
+            torch.save(best_model_state, f'best_model.pth')
+            print(f"Best model saved at epoch {epoch+1} with Top-1 Acc: {top1_acc:.4f}")
 
-            wandb_log = {
-                "epoch": epoch + 1,
-                "train_loss": train_loss,
-                "val_loss": val_loss,
-                "top1_accuracy": top1_acc,
-                "top5_accuracy": top5_acc,
-            }
-            wandb.log(wandb_log)
-
-            if top1_acc > best_top1_acc:
-                best_top1_acc = top1_acc
-                best_model_state = model.state_dict()
-                torch.save(best_model_state, f'best_model_fold{fold+1}.pth')
-                print(f"Best model saved at epoch {epoch+1} with Top-1 Acc: {top1_acc:.4f}")
-
-        wandb.finish()
-
+    wandb.finish()
 
 def train_one_epoch(model, dataloader, optimizer, criterion, device, scheduler):
     model.train()

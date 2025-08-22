@@ -6,6 +6,12 @@ import os
 from torchvision import transforms
 
 def encode_label(row):
+    """
+    Encode labels based on 'tumor', 'benign', and 'malignant' values.
+    - normal: tumor == 0
+    - benign: benign == 1
+    - malignant: malignant == 1
+    """
     if row['tumor'] == 0:
         return 0  # normal
     elif row['benign'] == 1:
@@ -13,32 +19,40 @@ def encode_label(row):
     elif row['malignant'] == 1:
         return 2  # malignant
     else:
-        return -1  # unknown
-
+        return -1  # unknown or corrupt
 
 class BoneTumorDataset(Dataset):
-    def __init__(self, csv_path, image_dir, transform=None):
-        self.data = pd.read_excel(csv_path)
+    def __init__(self, split_xlsx_path, metadata_xlsx_path, image_dir, transform=None):
+        """
+        split_xlsx_path: path to train.xlsx or val.xlsx
+        metadata_xlsx_path: path to dataset.xlsx (contains tumor/benign/malignant)
+        image_dir: path to images folder
+        """
+        # Load image list
+        split_df = pd.read_excel(split_xlsx_path)
+        meta_df = pd.read_excel(metadata_xlsx_path)
+
+        # Merge on image_id
+        self.df = pd.merge(split_df, meta_df, on="image_id", how="left")
+
+        # Generate labels
+        self.df['label'] = self.df.apply(encode_label, axis=1)
+
+        # Drop invalid labels
+        self.df = self.df[self.df['label'] != -1].reset_index(drop=True)
+
         self.image_dir = image_dir
         self.transform = transform
 
-        # Generate label column
-        self.data['label'] = self.data.apply(encode_label, axis=1)
-
-        # Filter unknown labels
-        self.data = self.data[self.data['label'] != -1]
-
     def __len__(self):
-        return len(self.data)
+        return len(self.df)
 
     def __getitem__(self, idx):
-        img_name = self.data.iloc[idx]['image_id']
-        img_path = os.path.join(self.image_dir, img_name)
+        row = self.df.iloc[idx]
+        img_path = os.path.join(self.image_dir, row['image_id'])
         image = Image.open(img_path).convert('RGB')
-
-        label = self.data.iloc[idx]['label']
 
         if self.transform:
             image = self.transform(image)
 
-        return image, label
+        return image, row['label']
