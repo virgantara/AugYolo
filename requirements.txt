@@ -4,3 +4,4 @@ seaborn
 openpyxl
 torch
 torchvision
+ultralytics
