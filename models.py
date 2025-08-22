@@ -83,5 +83,5 @@ class YOLOv8ClsFromYAML(nn.Module):
             new_pretrained_dict[new_key] = v
 
         missing, unexpected = self.model.load_state_dict(new_pretrained_dict, strict=False)
-        print(f"✅ Loaded {len(new_pretrained_dict)} layers.")
-        print(f"❌ Missing: {len(missing)} | ⚠️ Unexpected: {len(unexpected)}")
+        print(f"Loaded {len(new_pretrained_dict)} layers.")
+        print(f"Missing: {len(missing)} | Unexpected: {len(unexpected)}")
