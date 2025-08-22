@@ -12,6 +12,7 @@ from tqdm import tqdm
 import wandb
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from sklearn.model_selection import StratifiedKFold
+from models import YOLOv8nCls
 
 def main(args):
     print("Hyper-parameters: {}".format(args.__str__()))
@@ -32,6 +33,7 @@ def main(args):
         transforms.Resize((600, 600)),  # or (384, 384)
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(15),
+        transforms.ColorJitter(brightness=0.2, contrast=0.2),
         transforms.ToTensor(),
         transforms.Normalize(
             mean=[0.485, 0.456, 0.406],  # ImageNet stats
@@ -68,8 +70,8 @@ def main(args):
         test_loader = DataLoader(test_subset, batch_size=args.test_batch_size, shuffle=False)
 
         # Model definition
-        model = models.resnet18(pretrained=True)
-        model.fc = nn.Linear(model.fc.in_features, 3)
+        model = YOLOv8nCls(num_classes=3)
+        
         model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
         print(f"Total parameters: {sum(p.numel() for p in model.parameters()) / 1e6:.2f}M")
