@@ -12,8 +12,10 @@ from tqdm import tqdm
 import wandb
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from models import YOLOv8nCls
+import random
 
 def main(args):
+    set_seed(args.seed)
     print("Hyper-parameters: {}".format(args.__str__()))
 
     num_epochs = args.epochs
@@ -80,7 +82,7 @@ def main(args):
 
     wandb_log = {}  
   
-    model = YOLOv8nCls(num_classes=3)
+    model = YOLOv8nCls(num_classes=3, pretrained=True, checkpoint_path=args.pretrain_path)
     
     model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
@@ -90,9 +92,11 @@ def main(args):
     wandb.watch(model)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = (optim.SGD(model.parameters(), lr=args.lr*100, momentum=args.momentum, weight_decay=1e-4)
-                 if args.use_sgd else
-                 optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4))
+    lr = args.lr if not args.use_sgd else args.lr  # Don't multiply
+    optimizer = (optim.SGD(model.parameters(), lr=lr, momentum=args.momentum, weight_decay=1e-4)
+             if args.use_sgd else
+             optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4))
+
     
     scheduler = CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=args.lr)
 
@@ -101,8 +105,9 @@ def main(args):
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch+1}/{num_epochs}")
 
-        train_loss = train_one_epoch(model, train_loader, optimizer, criterion, device, scheduler)
+        train_loss = train_one_epoch(model, train_loader, optimizer, criterion, device)
         val_loss, top1_acc, top5_acc = validate(model, test_loader, criterion, device)
+        scheduler.step()
         print(f"Train Loss: {train_loss:.4f}")
         print(f"Val Loss: {val_loss:.4f} | Top-1 Acc: {top1_acc:.4f} | Top-5 Acc: {top5_acc:.4f}")
 
@@ -123,7 +128,7 @@ def main(args):
 
     wandb.finish()
 
-def train_one_epoch(model, dataloader, optimizer, criterion, device, scheduler):
+def train_one_epoch(model, dataloader, optimizer, criterion, device):
     model.train()
     running_loss = 0.0
 
@@ -138,7 +143,7 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, scheduler):
 
         running_loss += loss.item() * images.size(0)
 
-    scheduler.step()
+    
 
     epoch_loss = running_loss / len(dataloader.dataset)
     return epoch_loss
@@ -171,15 +176,28 @@ def validate(model, dataloader, criterion, device):
     return epoch_loss, top1_acc, top5_acc
 
 def _init_(args):
+
+
     if not os.path.exists('checkpoints'):
         os.makedirs('checkpoints')
     if not os.path.exists('checkpoints/'+args.exp_name):
         os.makedirs('checkpoints/'+args.exp_name)
 
+def set_seed(args):
+    seed = args.seed
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
 if __name__ == "__main__":
     # Training settings
     parser = argparse.ArgumentParser(description='BTXRD Classification')
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
+                        help='Name of the experiment')
+    parser.add_argument('--pretrain_path', type=str, default='pretrain/yolov8n-cls.pt', metavar='N',
                         help='Name of the experiment')
     parser.add_argument('--model_name', type=str, default='resnet18', metavar='N',
                         help='Name of the model')

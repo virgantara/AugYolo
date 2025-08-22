@@ -71,7 +71,7 @@ class ClassifyHead(nn.Module):
 
 
 class YOLOv8nCls(nn.Module):
-    def __init__(self, num_classes=3):
+    def __init__(self, num_classes=3, pretrained=False, checkpoint_path=None):
         super().__init__()
         self.stem   = ConvBNAct(3, 16, k=3, s=2)
         self.down0  = ConvBNAct(16, 32, k=3, s=2)
@@ -86,6 +86,9 @@ class YOLOv8nCls(nn.Module):
         self.down3  = ConvBNAct(128, 256, k=3, s=2)
 
         self.head = ClassifyHead(256, num_classes)
+
+        if pretrained and checkpoint_path:
+            self._load_pretrained_backbone(checkpoint_path)
 
     def forward(self, x):
         x = self.stem(x)
@@ -102,3 +105,21 @@ class YOLOv8nCls(nn.Module):
         x = self.stage4(x)
 
         return self.head(x)
+
+    def _load_pretrained_backbone(self, checkpoint_path):
+        print(f"Loading pretrained weights from {checkpoint_path}")
+        state_dict = torch.load(checkpoint_path, map_location='cpu')
+
+        # If checkpoint contains full model
+        if 'model' in state_dict:
+            state_dict = state_dict['model']
+
+        # Filter keys not belonging to the head
+        filtered_state_dict = {
+            k: v for k, v in state_dict.items()
+            if 'head' not in k and k in self.state_dict()
+        }
+
+        missing, unexpected = self.load_state_dict(filtered_state_dict, strict=False)
+        print(f"Loaded with missing keys: {missing}")
+        print(f"Unexpected keys: {unexpected}")
