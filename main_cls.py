@@ -11,7 +11,7 @@ from torchvision import models
 from tqdm import tqdm
 import wandb
 from torch.optim.lr_scheduler import CosineAnnealingLR
-from models import YOLOv8nCls
+from models import YOLOv8ClsFromYAML
 import random
 import numpy as np
 
