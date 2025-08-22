@@ -221,8 +221,6 @@ if __name__ == "__main__":
                         help='evaluate the model')
     parser.add_argument('--project_name', type=str, default='BTXRD', metavar='N',
                         help='Name of the Project WANDB')
-    parser.add_argument('--model_path', type=str, default='pretrained/GDANet_ModelNet40_93.4.t7', metavar='N',
-                        help='Pretrained model path')
     args = parser.parse_args()
 
     _init_()

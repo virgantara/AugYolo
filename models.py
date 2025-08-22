@@ -110,6 +110,7 @@ class YOLOv8nCls(nn.Module):
 	    print(f"Loading weights from {checkpoint_path}")
 	    ckpt = torch.load(checkpoint_path, map_location='cpu')
 
+	    # Ultralytics format: ckpt['model'].model.state_dict()
 	    if 'model' in ckpt and hasattr(ckpt['model'], 'model'):
 	        pretrained_dict = ckpt['model'].model.state_dict()
 	    else:
@@ -117,7 +118,7 @@ class YOLOv8nCls(nn.Module):
 
 	    model_dict = self.state_dict()
 
-	    # Mapping from Ultralytics module index to your named modules
+	    # Mapping from Ultralytics model index to your named modules
 	    prefix_map = {
 	        'model.0': 'stem',
 	        'model.1': 'down0',
@@ -128,19 +129,25 @@ class YOLOv8nCls(nn.Module):
 	        'model.6': 'stage3',
 	        'model.7': 'down3',
 	        'model.8': 'stage4',
-	        # model.9 is head → we skip it
+	        # model.9 = head (ignored)
 	    }
 
 	    mapped_pretrained = {}
-	    for full_key, weight in pretrained_dict.items():
-	        parts = full_key.split('.', 2)
-	        if len(parts) < 3:
+	    for k, v in pretrained_dict.items():
+	        if not k.startswith('model.'):
 	            continue
-	        prefix = f"{parts[0]}.{parts[1]}"
-	        if prefix in prefix_map:
-	            new_key = f"{prefix_map[prefix]}.{parts[2]}"
-	            if new_key in model_dict and model_dict[new_key].shape == weight.shape:
-	                mapped_pretrained[new_key] = weight
+	        parts = k.split('.', 2)  # ['model', 'model.0', 'conv.weight'] → WRONG
+	        # So fix to split after "model.model"
+	        if k.startswith("model.model."):
+	            sub_parts = k[len("model.model."):].split('.', 1)
+	            if len(sub_parts) != 2:
+	                continue
+	            block_id, subkey = sub_parts
+	            ul_prefix = f"model.{block_id}"
+	            if ul_prefix in prefix_map:
+	                new_key = f"{prefix_map[ul_prefix]}.{subkey}"
+	                if new_key in model_dict and model_dict[new_key].shape == v.shape:
+	                    mapped_pretrained[new_key] = v
 
 	    missing_keys, unexpected_keys = self.load_state_dict(mapped_pretrained, strict=False)
 
@@ -148,6 +155,7 @@ class YOLOv8nCls(nn.Module):
 	    print(f"❌ Missing keys: {len(missing_keys)}")
 	    for k in missing_keys[:10]:
 	        print(" -", k)
+
 
 
 
