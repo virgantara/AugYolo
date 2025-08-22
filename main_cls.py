@@ -30,6 +30,8 @@ def main(args):
 
     transform = transforms.Compose([
         transforms.Resize((600, 600)),  # or (384, 384)
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation(15),
         transforms.ToTensor(),
         transforms.Normalize(
             mean=[0.485, 0.456, 0.406],  # ImageNet stats
@@ -41,7 +43,7 @@ def main(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     labels = full_dataset.data['label'].values
-    
+
     skf = StratifiedKFold(n_splits=k_folds, shuffle=True, random_state=args.seed)
     for fold, (train_idx, test_idx) in enumerate(skf.split(full_dataset.data, labels)):
         wandb.init(
