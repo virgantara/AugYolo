@@ -13,6 +13,7 @@ import wandb
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from models import YOLOv8nCls
 import random
+import numpy as np
 
 def main(args):
     set_seed(args)
