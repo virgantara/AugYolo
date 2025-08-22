@@ -47,7 +47,8 @@ def main(args):
     test_dataset = BoneTumorDataset(
         split_xlsx_path=test_path,
         metadata_xlsx_path=metadata_xlsx_path,
-        image_dir=IMG_DIR
+        image_dir=IMG_DIR,
+        transform=transform
     )
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
