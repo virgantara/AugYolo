@@ -94,7 +94,6 @@ def main(args):
         )
 
     elif args.model_name == 'convnext':
-        
         model = ConvNeXtBTXRD(num_classes=3)
     
     model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))

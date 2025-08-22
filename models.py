@@ -13,13 +13,16 @@ class ConvNeXtBTXRD(nn.Module):
     def __init__(self, num_classes):
         super(ConvNeXtBTXRD, self).__init__()
         weights = ConvNeXt_Tiny_Weights.DEFAULT
-        self.backbone = convnext_tiny(weights=weights)  # You can change to convnext_small/base/large
+        self.backbone = convnext_tiny(weights=weights)
 
-        # Replace the classifier (head)
         in_features = self.backbone.classifier[2].in_features
+
+        # Replace the classifier with pooling + flattening + classifier
         self.backbone.classifier = nn.Sequential(
-            nn.LayerNorm(in_features, eps=1e-6),
-            nn.Linear(in_features, num_classes)
+            nn.AdaptiveAvgPool2d((1, 1)),             # [B, 768, 1, 1]
+            nn.Flatten(1),                             # [B, 768]
+            nn.LayerNorm(in_features, eps=1e-6),       # [B, 768]
+            nn.Linear(in_features, num_classes)        # [B, num_classes]
         )
 
     def forward(self, x):
