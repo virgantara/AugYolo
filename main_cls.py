@@ -21,9 +21,6 @@ def main(args):
 
     k_folds = 5
     
-    
-    BATCH_SIZE = 32
-
     DATASET_DIR = 'data/BTXRD'
     file_path = os.path.join(DATASET_DIR, 'dataset.xlsx')  
     IMG_DIR = os.path.join(DATASET_DIR, 'images')
@@ -150,7 +147,7 @@ def validate(model, dataloader, criterion, device):
             running_loss += loss.item() * images.size(0)
 
             top1 = top_k_accuracy(outputs, labels, k=1)
-            top5 = top_k_accuracy(outputs, labels, k=5)
+            top5 = top_k_accuracy(outputs, labels, k=2)
 
             top1_total += top1
             top5_total += top5
@@ -197,5 +194,5 @@ if __name__ == "__main__":
                         help='Pretrained model path')
     args = parser.parse_args()
 
-    _init_()
+    _init_(args)
     main(args)
