@@ -29,7 +29,7 @@ def main(args):
     IMG_DIR = os.path.join(DATASET_DIR, 'images')
     
     train_transform = transforms.Compose([
-        transforms.Resize((600, 600)),  # or (384, 384)
+        transforms.Resize((608, 608)),  # or (384, 384)
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(15),
         transforms.ColorJitter(brightness=0.2, contrast=0.2),
@@ -41,7 +41,7 @@ def main(args):
     ])
 
     test_transform = transforms.Compose([
-        transforms.Resize((600, 600)),  # or (384, 384)
+        transforms.Resize((608, 608)),  # or (384, 384)
         transforms.ToTensor(),
         transforms.Normalize(
             mean=[0.485, 0.456, 0.406],  # ImageNet stats
@@ -63,8 +63,10 @@ def main(args):
         transform=test_transform
     )
 
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=args.test_batch_size, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
+                          num_workers=4, pin_memory=True)
+    test_loader = DataLoader(test_dataset, batch_size=args.test_batch_size, shuffle=False,
+                          num_workers=4, pin_memory=True)
 
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
