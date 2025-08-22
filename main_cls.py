@@ -15,7 +15,7 @@ from models import YOLOv8nCls
 import random
 
 def main(args):
-    set_seed(args.seed)
+    set_seed(args)
     print("Hyper-parameters: {}".format(args.__str__()))
 
     num_epochs = args.epochs
@@ -175,7 +175,7 @@ def validate(model, dataloader, criterion, device):
 
     return epoch_loss, top1_acc, top5_acc
 
-def _init_(args):
+def _init_():
 
 
     if not os.path.exists('checkpoints'):
@@ -224,5 +224,5 @@ if __name__ == "__main__":
                         help='Pretrained model path')
     args = parser.parse_args()
 
-    _init_(args)
+    _init_()
     main(args)
