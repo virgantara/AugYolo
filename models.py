@@ -107,26 +107,32 @@ class YOLOv8nCls(nn.Module):
         return self.head(x)
 
     def _load_pretrained_weights(self, checkpoint_path):
-        print(f"Loading weights from {checkpoint_path}")
-        ckpt = torch.load(checkpoint_path, map_location='cpu')
-        
-        # Ultralytics yolov8n-cls.pt structure
-        if 'model' in ckpt:
-            state_dict = ckpt['model'].float().state_dict()
-        elif isinstance(ckpt, dict) and 'state_dict' in ckpt:
-            state_dict = ckpt['state_dict']
-        elif isinstance(ckpt, dict):
-            state_dict = ckpt
-        else:
-            raise ValueError("Checkpoint format not recognized.")
+	    print(f"Loading weights from {checkpoint_path}")
+	    ckpt = torch.load(checkpoint_path, map_location='cpu')
 
-        # Filter only layers that exist in this model (and skip head)
-        filtered_dict = {
-            k: v for k, v in state_dict.items()
-            if k in self.state_dict() and not k.startswith("head")
-        }
+	    # For Ultralytics YOLOv8 .pt format
+	    if 'model' in ckpt and hasattr(ckpt['model'], 'model'):
+	        pretrained_dict = ckpt['model'].model.state_dict()
+	    elif 'model' in ckpt:
+	        pretrained_dict = ckpt['model'].state_dict()
+	    else:
+	        raise ValueError("Unrecognized checkpoint format")
 
-        missing_keys, unexpected_keys = self.load_state_dict(filtered_dict, strict=False)
-        print(f"Loaded with {len(filtered_dict)} layers.")
-        print(f"Missing keys: {missing_keys}")
-        print(f"Unexpected keys: {unexpected_keys}")
+	    model_dict = self.state_dict()
+
+	    # Rename keys to match your model (remove "model." prefix)
+	    mapped_pretrained = {}
+	    for k, v in pretrained_dict.items():
+	        new_key = k
+	        if new_key.startswith('model.'):
+	            new_key = new_key[len('model.'):]
+	        if new_key in model_dict and model_dict[new_key].shape == v.shape:
+	            mapped_pretrained[new_key] = v
+
+	    # Load only matching weights
+	    missing_keys, unexpected_keys = self.load_state_dict(mapped_pretrained, strict=False)
+
+	    print(f"Loaded {len(mapped_pretrained)} layers.")
+	    print(f"Missing keys: {missing_keys}")
+	    print(f"Unexpected keys: {unexpected_keys}")
+
