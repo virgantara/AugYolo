@@ -117,7 +117,7 @@ class YOLOv8nCls(nn.Module):
 
 	    model_dict = self.state_dict()
 
-	    # Map Ultralytics numeric layers to your named modules
+	    # Mapping from Ultralytics module index to your named modules
 	    prefix_map = {
 	        'model.0': 'stem',
 	        'model.1': 'down0',
@@ -128,22 +128,26 @@ class YOLOv8nCls(nn.Module):
 	        'model.6': 'stage3',
 	        'model.7': 'down3',
 	        'model.8': 'stage4',
-	        # model.9 is the head — ignore
+	        # model.9 is head → we skip it
 	    }
 
 	    mapped_pretrained = {}
-	    for k, v in pretrained_dict.items():
-	        for ul_prefix, my_prefix in prefix_map.items():
-	            if k.startswith(ul_prefix):
-	                new_key = k.replace(ul_prefix, my_prefix, 1)
-	                if new_key in model_dict and model_dict[new_key].shape == v.shape:
-	                    mapped_pretrained[new_key] = v
-	                break
+	    for full_key, weight in pretrained_dict.items():
+	        parts = full_key.split('.', 2)
+	        if len(parts) < 3:
+	            continue
+	        prefix = f"{parts[0]}.{parts[1]}"
+	        if prefix in prefix_map:
+	            new_key = f"{prefix_map[prefix]}.{parts[2]}"
+	            if new_key in model_dict and model_dict[new_key].shape == weight.shape:
+	                mapped_pretrained[new_key] = weight
 
 	    missing_keys, unexpected_keys = self.load_state_dict(mapped_pretrained, strict=False)
 
-	    print(f"Loaded {len(mapped_pretrained)} layers.")
-	    print(f"Missing keys: {len(missing_keys)}")
-	    print(f"Unexpected keys: {unexpected_keys}")
+	    print(f"✅ Loaded {len(mapped_pretrained)} layers.")
+	    print(f"❌ Missing keys: {len(missing_keys)}")
+	    for k in missing_keys[:10]:
+	        print(" -", k)
+
 
 
