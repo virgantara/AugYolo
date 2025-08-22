@@ -25,7 +25,7 @@ def main(args):
     test_path = os.path.join(DATASET_DIR, 'val.xlsx')  
     IMG_DIR = os.path.join(DATASET_DIR, 'images')
     
-    transform = transforms.Compose([
+    train_transform = transforms.Compose([
         transforms.Resize((600, 600)),  # or (384, 384)
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(15),
@@ -37,18 +37,27 @@ def main(args):
         )
     ])
 
+    test_transform = transforms.Compose([
+        transforms.Resize((600, 600)),  # or (384, 384)
+        transforms.ToTensor(),
+        transforms.Normalize(
+            mean=[0.485, 0.456, 0.406],  # ImageNet stats
+            std=[0.229, 0.224, 0.225]
+        )
+    ])
+
     train_dataset = BoneTumorDataset(
         split_xlsx_path=train_path,
         metadata_xlsx_path=metadata_xlsx_path,
         image_dir=IMG_DIR,  # make sure this exists
-        transform=transform
+        transform=train_transform
     )
 
     test_dataset = BoneTumorDataset(
         split_xlsx_path=test_path,
         metadata_xlsx_path=metadata_xlsx_path,
         image_dir=IMG_DIR,
-        transform=transform
+        transform=test_transform
     )
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
