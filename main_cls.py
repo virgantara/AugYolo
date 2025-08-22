@@ -11,7 +11,7 @@ from torchvision import models
 from tqdm import tqdm
 import wandb
 from torch.optim.lr_scheduler import CosineAnnealingLR
-from models import YOLOv8ClsFromYAML
+from models import YOLOv8ClsFromYAML, ConvNeXtBTXRD
 import random
 import numpy as np
 
@@ -82,13 +82,17 @@ def main(args):
     )
 
     wandb_log = {}  
-  
-    model = YOLOv8ClsFromYAML(
-        yaml_path='yolov8-cls.yaml',
-        scale='n',
-        num_classes=3,
-        pretrained=args.pretrain_path
-    )
+    
+    if args.model_name == 'yolov8':
+        model = YOLOv8ClsFromYAML(
+            yaml_path='yolov8-cls.yaml',
+            scale='n',
+            num_classes=3,
+            pretrained=args.pretrain_path
+        )
+
+    elif args.model_name == 'convnext':
+        model = ConvNeXtBTXRD(num_classes=3)
     
     model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
@@ -205,7 +209,7 @@ if __name__ == "__main__":
                         help='Name of the experiment')
     parser.add_argument('--pretrain_path', type=str, default='pretrain/yolov8n-cls.pt', metavar='N',
                         help='Name of the experiment')
-    parser.add_argument('--model_name', type=str, default='resnet18', metavar='N',
+    parser.add_argument('--model_name', type=str, default='convnext', metavar='N',
                         help='Name of the model')
     parser.add_argument('--batch_size', type=int, default=32, metavar='batch_size',
                         help='Size of batch)')

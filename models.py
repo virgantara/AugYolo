@@ -5,6 +5,26 @@ from pathlib import Path
 
 from models_lib import ConvBNAct as Conv, C2f, ClassifyHead as Classify
 
+import torch
+import torch.nn as nn
+from torchvision.models import convnext_tiny, convnext_base, convnext_large, convnext_xlarge
+
+class ConvNeXtBTXRD(nn.Module):
+    def __init__(self, num_classes):
+        super(ConvNeXtBTXRD, self).__init__()
+        self.backbone = convnext_base(pretrained=True)  # You can change to convnext_small/base/large
+
+        # Replace the classifier (head)
+        in_features = self.backbone.classifier[2].in_features
+        self.backbone.classifier = nn.Sequential(
+            nn.LayerNorm(in_features, eps=1e-6),
+            nn.Linear(in_features, num_classes)
+        )
+
+    def forward(self, x):
+        return self.backbone(x)
+
+
 module_map = {
     'Conv': Conv,
     'C2f': C2f,
