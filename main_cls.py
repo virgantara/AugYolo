@@ -69,9 +69,9 @@ def main(args):
     )
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
-                          num_workers=4, pin_memory=True)
+                          num_workers=args.num_worker, pin_memory=True)
     test_loader = DataLoader(test_dataset, batch_size=args.test_batch_size, shuffle=False,
-                          num_workers=4, pin_memory=True)
+                          num_workers=args.num_worker, pin_memory=True)
 
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -238,6 +238,8 @@ if __name__ == "__main__":
                         help='enables CUDA training')
     parser.add_argument('--seed', type=int, default=1, metavar='S',
                         help='random seed (default: 1)')
+    parser.add_argument('--num_worker', type=int, default=4, metavar='S',
+                        help='Num of Worker')
     parser.add_argument('--eval', type=bool,  default=False,
                         help='evaluate the model')
     parser.add_argument('--project_name', type=str, default='BTXRD', metavar='N',
