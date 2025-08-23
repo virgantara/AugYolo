@@ -157,7 +157,7 @@ def main(args):
     elif args.model_name == 'efficientnetb4':
         model = EfficientNetB4BTXRD(num_classes=3, dropout_p=args.dropout)
     
-    model.load_state_dict(torch.load(args.model_path), weights_only=True)
+    model.load_state_dict(torch.load(args.model_path, weights_only=True))
     model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
     print(f"Total parameters: {sum(p.numel() for p in model.parameters()) / 1e6:.2f}M")
