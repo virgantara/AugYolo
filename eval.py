@@ -102,8 +102,7 @@ def main(args):
     set_seed(args)
     print("Hyper-parameters: {}".format(args.__str__()))
 
-    num_epochs = args.epochs
-
+    
     
     DATASET_DIR = 'data/BTXRD'
     metadata_xlsx_path = os.path.join(DATASET_DIR, 'dataset.xlsx')
