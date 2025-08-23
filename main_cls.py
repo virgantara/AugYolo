@@ -113,7 +113,7 @@ def main(args):
 
     wandb.watch(model)
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
     lr = args.lr if not args.use_sgd else args.lr  # Don't multiply
     optimizer = (optim.SGD(model.parameters(), lr=lr, momentum=args.momentum, weight_decay=1e-4)
              if args.use_sgd else
