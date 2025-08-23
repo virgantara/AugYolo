@@ -167,7 +167,6 @@ def main(args):
 
     val_loss, top1_acc, top5_acc, extra_metrics, cm_image = validate(model, test_loader, criterion, device, class_names=CLASS_NAMES)
     
-    print(f"Train Loss: {train_loss:.4f}")
     print(f"Val  Loss: {val_loss:.4f} | Top-1 Acc: {top1_acc:.4f} | Top-2 Acc: {top5_acc:.4f}")
     print(f"Balanced Acc: {extra_metrics['balanced_acc']:.4f} | Macro F1: {extra_metrics['macro_f1']:.4f} | Weighted F1: {extra_metrics['weighted_f1']:.4f}")
     print(f"Kappa: {extra_metrics['kappa']:.4f} | MCC: {extra_metrics['mcc']:.4f}")
