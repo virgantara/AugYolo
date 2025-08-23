@@ -77,10 +77,12 @@ def main(args):
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
+    y_labels = train_dataset.df['label'].tolist()
+
     class_weights = compute_class_weight(
         class_weight='balanced',
         classes=[0, 1, 2],
-        y=train_dataset.labels  # or collect all labels manually
+        y=y_labels  # or collect all labels manually
     )
     class_weights = torch.tensor(class_weights, dtype=torch.float).to(device)
 
