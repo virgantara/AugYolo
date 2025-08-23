@@ -4,13 +4,11 @@ from dataset import BoneTumorDataset
 import os
 from torchvision import transforms
 import argparse
-from util import top_k_accuracy
+from util import top_k_accuracy, append_row_to_excel
 import torch.nn as nn
-import torch.optim as optim
 from torchvision import models
 from tqdm import tqdm
-import wandb
-from torch.optim.lr_scheduler import CosineAnnealingLR
+
 from models import (
     YOLOv8ClsFromYAML, 
     ConvNeXtBTXRD, 
@@ -172,6 +170,29 @@ def main(args):
     print(f"Kappa: {extra_metrics['kappa']:.4f} | MCC: {extra_metrics['mcc']:.4f}")
     print(f"Per-class F1: {extra_metrics['per_class_f1']} (support={extra_metrics['per_class_support']})")
 
+    row = {
+        "val_loss": float(val_loss),
+        "top1_acc": float(top1_acc),
+        "top2_acc": float(top5_acc),
+        "balanced_acc": float(extra_metrics["balanced_acc"]),
+        "macro_f1": float(extra_metrics["macro_f1"]),
+        "micro_f1": float(extra_metrics["micro_f1"]),
+        "weighted_f1": float(extra_metrics["weighted_f1"]),
+        "kappa": float(extra_metrics["kappa"]),
+        "mcc": float(extra_metrics["mcc"]),
+        "roc_auc_ovr_macro": (None if extra_metrics["roc_auc_ovr_macro"] is None else float(extra_metrics["roc_auc_ovr_macro"])),
+        "pr_auc_macro": (None if extra_metrics["pr_auc_macro"] is None else float(extra_metrics["pr_auc_macro"])),
+    }
+
+    # Expand per-class metrics into columns using CLASS_NAMES (keep order aligned)
+    for i, cname in enumerate(CLASS_NAMES):
+        row[f"precision_{cname}"] = float(extra_metrics["per_class_precision"][i])
+        row[f"recall_{cname}"]    = float(extra_metrics["per_class_recall"][i])
+        row[f"f1_{cname}"]        = float(extra_metrics["per_class_f1"][i])
+        row[f"support_{cname}"]   = int(extra_metrics["per_class_support"][i])
+
+    
+    append_row_to_excel(excel_path, row, sheet_name="Eval")
     if cm_image is not None:
         cm_path = os.path.join("checkpoints", args.exp_name, f"cm.png")
         cm_image.image.save(cm_path)
