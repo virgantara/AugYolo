@@ -191,7 +191,8 @@ def main(args):
         row[f"f1_{cname}"]        = float(extra_metrics["per_class_f1"][i])
         row[f"support_{cname}"]   = int(extra_metrics["per_class_support"][i])
 
-    
+    save_dir = os.path.join("checkpoints", args.exp_name)
+    excel_path = os.path.join(save_dir, "eval_metrics.xlsx")
     append_row_to_excel(excel_path, row, sheet_name="Eval")
     if cm_image is not None:
         cm_path = os.path.join("checkpoints", args.exp_name, f"cm.png")
