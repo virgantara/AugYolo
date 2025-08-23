@@ -19,6 +19,7 @@ from models import (
 )
 import random
 import numpy as np
+from sklearn.utils.class_weight import compute_class_weight
 
 def main(args):
     set_seed(args)
@@ -76,6 +77,13 @@ def main(args):
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
+    class_weights = compute_class_weight(
+        class_weight='balanced',
+        classes=[0, 1, 2],
+        y=train_dataset.labels  # or collect all labels manually
+    )
+    class_weights = torch.tensor(class_weights, dtype=torch.float).to(device)
+
     wandb.init(
         project=args.project_name, 
         name=f"{args.exp_name}",
@@ -89,6 +97,8 @@ def main(args):
     )
 
     wandb_log = {}  
+
+
     
     if args.model_name == 'yolov8':
         model = YOLOv8ClsFromYAML(
@@ -113,7 +123,7 @@ def main(args):
 
     wandb.watch(model)
 
-    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1, weight=class_weights)
     lr = args.lr if not args.use_sgd else args.lr  # Don't multiply
     optimizer = (optim.SGD(model.parameters(), lr=lr, momentum=args.momentum, weight_decay=1e-4)
              if args.use_sgd else
