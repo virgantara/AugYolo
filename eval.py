@@ -247,6 +247,8 @@ if __name__ == "__main__":
                         help='Size of batch)')
     parser.add_argument('--no_cuda', type=bool, default=False,
                         help='enables CUDA training')
+    parser.add_argument('--dropout', type=float, default=0.4, metavar='LR',
+                        help='Dropout')
     parser.add_argument('--seed', type=int, default=1, metavar='S',
                         help='random seed (default: 1)')
     parser.add_argument('--num_worker', type=int, default=4, metavar='S',
