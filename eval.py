@@ -137,7 +137,7 @@ def main(args):
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    y_labels = train_dataset.df['label'].tolist()
+    y_labels = test_dataset.df['label'].tolist()
 
     
     
