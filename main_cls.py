@@ -145,7 +145,8 @@ def main(args):
         if top1_acc > best_top1_acc:
             best_top1_acc = top1_acc
             best_model_state = model.state_dict()
-            torch.save(best_model_state, f'best_model.pth')
+            save_dir = os.path.join("checkpoints",args.exp_name)
+            torch.save(best_model_state, os.path.join(save_dir, 'best_model.pth'))
             print(f"Best model saved at epoch {epoch+1} with Top-1 Acc: {top1_acc:.4f}")
 
     wandb.finish()
