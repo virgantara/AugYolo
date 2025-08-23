@@ -102,9 +102,9 @@ def main(args):
         model = ConvNeXtBTXRD(num_classes=3)
 
     elif args.model_name == 'efficientnetb0':
-        model = EfficientNetBTXRD(num_classes=3)
+        model = EfficientNetBTXRD(num_classes=3, dropout_p=args.dropout)
     elif args.model_name == 'efficientnetb4':
-        model = EfficientNetB4BTXRD(num_classes=3)
+        model = EfficientNetB4BTXRD(num_classes=3, dropout_p=args.dropout)
     
     model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
@@ -232,6 +232,8 @@ if __name__ == "__main__":
     parser.add_argument('--use_sgd', action='store_true', default=False, help='Use SGD')
     parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
                         help='learning rate (default: 0.001, 0.1 if using sgd)')
+    parser.add_argument('--dropout', type=float, default=0.2, metavar='LR',
+                        help='Dropout')
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                         help='SGD momentum (default: 0.9)')
     parser.add_argument('--no_cuda', type=bool, default=False,

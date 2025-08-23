@@ -14,14 +14,14 @@ from torchvision.models import (
 )
 
 class EfficientNetB4BTXRD(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, dropout_p=0.4):
         super(EfficientNetB4BTXRD, self).__init__()
         weights = EfficientNet_B4_Weights.DEFAULT
         self.backbone = efficientnet_b4(weights=weights)
 
         in_features = self.backbone.classifier[1].in_features
         self.backbone.classifier = nn.Sequential(
-            nn.Dropout(p=0.4, inplace=True),  # B4 uses 0.4 dropout
+            nn.Dropout(p=dropout_p, inplace=True),  # B4 uses 0.4 dropout
             nn.Linear(in_features, num_classes)
         )
 
@@ -30,7 +30,7 @@ class EfficientNetB4BTXRD(nn.Module):
 
 
 class EfficientNetBTXRD(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, dropout_p=0.2):
         super(EfficientNetBTXRD, self).__init__()
         weights = EfficientNet_B0_Weights.DEFAULT
         self.backbone = efficientnet_b0(weights=weights)
@@ -38,7 +38,7 @@ class EfficientNetBTXRD(nn.Module):
         # Replace classifier
         in_features = self.backbone.classifier[1].in_features
         self.backbone.classifier = nn.Sequential(
-            nn.Dropout(p=0.2, inplace=True),
+            nn.Dropout(p=dropout_p, inplace=True),
             nn.Linear(in_features, num_classes)
         )
 
