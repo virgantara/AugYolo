@@ -172,7 +172,10 @@ def main(args):
     print(f"Kappa: {extra_metrics['kappa']:.4f} | MCC: {extra_metrics['mcc']:.4f}")
     print(f"Per-class F1: {extra_metrics['per_class_f1']} (support={extra_metrics['per_class_support']})")
 
-
+    if cm_image is not None:
+        cm_path = os.path.join("checkpoints", args.exp_name, f"cm_epoch{epoch+1}.png")
+        cm_image.image.save(cm_path)
+        print(f"Confusion matrix saved at {cm_path}")
 def validate(model, dataloader, criterion, device, class_names=[]):
     model.eval()
     running_loss = 0.0
