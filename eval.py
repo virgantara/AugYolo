@@ -175,7 +175,7 @@ def main(args):
     print(f"Per-class F1: {extra_metrics['per_class_f1']} (support={extra_metrics['per_class_support']})")
 
 
-def validate(model, dataloader, criterion, device, class_names=CLASS_NAMES):
+def validate(model, dataloader, criterion, device, class_names=[]):
     model.eval()
     running_loss = 0.0
     top1_total = 0
