@@ -79,12 +79,7 @@ def main(args):
     
     y_labels = train_dataset.df['label'].tolist()
 
-    class_weights = compute_class_weight(
-        class_weight='balanced',
-        classes=[0, 1, 2],
-        y=y_labels  # or collect all labels manually
-    )
-    class_weights = torch.tensor(class_weights, dtype=torch.float).to(device)
+    
 
     wandb.init(
         project=args.project_name, 
@@ -125,7 +120,18 @@ def main(args):
 
     wandb.watch(model)
 
-    criterion = nn.CrossEntropyLoss(label_smoothing=0.1, weight=class_weights)
+    if args.use_balanced_weight:
+        class_weights = compute_class_weight(
+            class_weight='balanced',
+            classes=[0, 1, 2],
+            y=y_labels  # or collect all labels manually
+        )
+        class_weights = torch.tensor(class_weights, dtype=torch.float).to(device)
+
+        criterion = nn.CrossEntropyLoss(label_smoothing=0.1, weight=class_weights)
+    else:
+        criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+        
     lr = args.lr if not args.use_sgd else args.lr  # Don't multiply
     optimizer = (optim.SGD(model.parameters(), lr=lr, momentum=args.momentum, weight_decay=1e-4)
              if args.use_sgd else
@@ -243,6 +249,7 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', type=int, default=300, metavar='N',
                         help='number of episode to train')
     parser.add_argument('--use_sgd', action='store_true', default=False, help='Use SGD')
+    parser.add_argument('--use_balanced_weight', action='store_true', default=False, help='Use Weight Balancing')
     parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
                         help='learning rate (default: 0.001, 0.1 if using sgd)')
     parser.add_argument('--dropout', type=float, default=0.2, metavar='LR',

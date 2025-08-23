@@ -39,12 +39,16 @@ class EfficientNetBTXRD(nn.Module):
         in_features = self.backbone.classifier[1].in_features
         self.backbone.classifier = nn.Sequential(
             nn.Dropout(p=dropout_p, inplace=True),
-            nn.Linear(in_features, 256),
-            nn.BatchNorm1d(256),
-            nn.ReLU(),
-            nn.Dropout(p=0.3),
-            nn.Linear(256, num_classes)
+            nn.Linear(in_features, num_classes)
         )
+        # self.backbone.classifier = nn.Sequential(
+        #     nn.Dropout(p=dropout_p, inplace=True),
+        #     nn.Linear(in_features, 256),
+        #     nn.BatchNorm1d(256),
+        #     nn.ReLU(),
+        #     nn.Dropout(p=0.3),
+        #     nn.Linear(256, num_classes)
+        # )
 
     def forward(self, x):
         return self.backbone(x)
