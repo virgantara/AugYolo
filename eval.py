@@ -273,6 +273,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='BTXRD Classification')
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
+    parser.add_argument('--img_size', type=int, default=608, metavar='img_size',
+                        help='Size of input image)')
     parser.add_argument('--model_path', type=str, default='checkpoints/exp/best_model.pth', metavar='N',
                         help='model_path')
     parser.add_argument('--model_name', type=str, default='convnext', metavar='N',
