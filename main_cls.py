@@ -21,7 +21,7 @@ from models import (
 import random
 import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
-from van import VAN
+from van import VAN, van_b3
 
 def main(args):
     set_seed(args)
@@ -98,7 +98,7 @@ def main(args):
     wandb_log = {}  
 
     model_map = {
-        'van': lambda: VAN(num_classes=3, img_size=608),
+        'van': lambda: van_b3(pretrained=True, num_classes=3, img_size=608),
         'yolov8': lambda: YOLOv8ClsFromYAML(
             yaml_path='yolov8-cls.yaml',
             scale='n',
