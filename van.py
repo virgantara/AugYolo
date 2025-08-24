@@ -287,15 +287,98 @@ def load_model_weights(model, arch, kwargs):
     model.load_state_dict(checkpoint["state_dict"], strict=strict)
     return model
 
+@register_model
+def van_b0(pretrained=False, **kwargs):
+    model = VAN(
+        embed_dims=[32, 64, 160, 256], mlp_ratios=[8, 8, 4, 4],
+        norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 3, 5, 2],
+        **kwargs)
+    model.default_cfg = _cfg()
+    if pretrained:
+        model = load_model_weights(model, "van_b0", kwargs)
+    return model
 
+
+@register_model
+def van_b1(pretrained=False, **kwargs):
+    model = VAN(
+        embed_dims=[64, 128, 320, 512], mlp_ratios=[8, 8, 4, 4],
+        norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[2, 2, 4, 2],
+        **kwargs)
+    model.default_cfg = _cfg()
+    if pretrained:
+        model = load_model_weights(model, "van_b1", kwargs)
+    return model
+
+@register_model
+def van_b2(pretrained=False, **kwargs):
+    model = VAN(
+        embed_dims=[64, 128, 320, 512], mlp_ratios=[8, 8, 4, 4],
+        norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 3, 12, 3],
+        **kwargs)
+    model.default_cfg = _cfg()
+    if pretrained:
+        model = load_model_weights(model, "van_b2", kwargs)
+    return model
+
+@register_model
+def van_b3(pretrained=False, **kwargs):
+    model = VAN(
+        embed_dims=[64, 128, 320, 512], mlp_ratios=[8, 8, 4, 4],
+        norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 5, 27, 3],
+        **kwargs)
+    model.default_cfg = _cfg()
+    if pretrained:
+        model = load_model_weights(model, "van_b3", kwargs)
+    return model
+
+@register_model
+def van_b4(pretrained=False, **kwargs):
+    model = VAN(
+        embed_dims=[64, 128, 320, 512], mlp_ratios=[8, 8, 4, 4],
+        norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 6, 40, 3],
+        **kwargs)
+    model.default_cfg = _cfg()
+    if pretrained:
+        model = load_model_weights(model, "van_b4", kwargs)
+    return model
+
+
+@register_model
+def van_b5(pretrained=False, **kwargs):
+    model = VAN(
+        embed_dims=[96, 192, 480, 768], mlp_ratios=[8, 8, 4, 4],
+        norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 3, 24, 3],
+        **kwargs)
+    model.default_cfg = _cfg()
+    if pretrained:
+        model = load_model_weights(model, "van_b5", kwargs)
+    return model
+
+
+@register_model
+def van_b6(pretrained=False, **kwargs):
+    model = VAN(
+        embed_dims=[96, 192, 384, 768], mlp_ratios=[8, 8, 4, 4],
+        norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[6,6,90,6],
+        **kwargs)
+    model.default_cfg = _cfg()
+    if pretrained:
+        model = load_model_weights(model, "van_b6", kwargs)
+    return model
 
 if __name__== '__main__':
     img_size = 608
     data = torch.rand(2,3,img_size,img_size)
-    model = VAN(
+    model = van_b3(
+        pretrained=True,
         img_size=img_size,
         num_classes=3
     )
+    # model = VAN(
+    #     img_size=img_size,
+    #     num_classes=3
+    # )
 
     model.default_cfg = _cfg()
 
