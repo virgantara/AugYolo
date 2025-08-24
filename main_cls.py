@@ -15,7 +15,8 @@ from models import (
     YOLOv8ClsFromYAML, 
     ConvNeXtBTXRD, 
     EfficientNetBTXRD,
-    EfficientNetB4BTXRD
+    EfficientNetB4BTXRD,
+    ResNet50
 )
 import random
 import numpy as np
@@ -95,24 +96,21 @@ def main(args):
 
     wandb_log = {}  
 
-
-    
-    if args.model_name == 'yolov8':
-        model = YOLOv8ClsFromYAML(
+    model_map = {
+        'yolov8': lambda: YOLOv8ClsFromYAML(
             yaml_path='yolov8-cls.yaml',
             scale='n',
             num_classes=3,
             pretrained=args.pretrain_path
-        )
-
-    elif args.model_name == 'convnext':
-        model = ConvNeXtBTXRD(num_classes=3)
-
-    elif args.model_name == 'efficientnetb0':
-        model = EfficientNetBTXRD(num_classes=3, dropout_p=args.dropout)
-    elif args.model_name == 'efficientnetb4':
-        model = EfficientNetB4BTXRD(num_classes=3, dropout_p=args.dropout)
+        ),
+        'convnext': lambda: ConvNeXtBTXRD(num_classes=3),
+        'efficientnetb0': lambda: EfficientNetBTXRD(num_classes=3, dropout_p=args.dropout),
+        'efficientnetb4': lambda: EfficientNetB4BTXRD(num_classes=3, dropout_p=args.dropout),
+        'resnet50': lambda: ResNet50(num_classes=3, dropout_p=args.dropout)
+    }
     
+    model = model_map[args.model_name]()
+        
     model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
     print(f"Total parameters: {sum(p.numel() for p in model.parameters()) / 1e6:.2f}M")
