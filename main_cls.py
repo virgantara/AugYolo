@@ -22,6 +22,7 @@ import random
 import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
 from van import VAN, van_b3
+from timm.models.vision_transformer import _cfg
 
 def main(args):
     set_seed(args)
@@ -98,7 +99,6 @@ def main(args):
     wandb_log = {}  
 
     model_map = {
-        'van': lambda: van_b3(pretrained=True, num_classes=3, img_size=608),
         'yolov8': lambda: YOLOv8ClsFromYAML(
             yaml_path='yolov8-cls.yaml',
             scale='n',
@@ -110,8 +110,17 @@ def main(args):
         'efficientnetb4': lambda: EfficientNetB4BTXRD(num_classes=3, dropout_p=args.dropout),
         'resnet50': lambda: ResNet50(num_classes=3, dropout_p=args.dropout)
     }
-    
-    model = model_map[args.model_name]()
+
+    if args.model_name == 'van':
+        model = VAN(
+            pretrained=True,
+            img_size=img_size,
+            num_classes=3
+        )
+        
+        model.default_cfg = _cfg()
+    else:
+        model = model_map[args.model_name]()
         
     model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
