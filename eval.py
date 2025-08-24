@@ -139,21 +139,21 @@ def main(args):
 
     
     
-    if args.model_name == 'yolov8':
-        model = YOLOv8ClsFromYAML(
+    model_map = {
+        'van': lambda: VAN(num_classes=3, img_size=608),
+        'yolov8': lambda: YOLOv8ClsFromYAML(
             yaml_path='yolov8-cls.yaml',
             scale='n',
             num_classes=3,
             pretrained=args.pretrain_path
-        )
-
-    elif args.model_name == 'convnext':
-        model = ConvNeXtBTXRD(num_classes=3)
-
-    elif args.model_name == 'efficientnetb0':
-        model = EfficientNetBTXRD(num_classes=3, dropout_p=args.dropout)
-    elif args.model_name == 'efficientnetb4':
-        model = EfficientNetB4BTXRD(num_classes=3, dropout_p=args.dropout)
+        ),
+        'convnext': lambda: ConvNeXtBTXRD(num_classes=3),
+        'efficientnetb0': lambda: EfficientNetBTXRD(num_classes=3, dropout_p=args.dropout),
+        'efficientnetb4': lambda: EfficientNetB4BTXRD(num_classes=3, dropout_p=args.dropout),
+        'resnet50': lambda: ResNet50(num_classes=3, dropout_p=args.dropout)
+    }
+    
+    model = model_map[args.model_name]()
     
     model.load_state_dict(torch.load(args.model_path, weights_only=True))
     model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
