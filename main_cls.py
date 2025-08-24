@@ -21,7 +21,7 @@ from models import (
 import random
 import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
-from van import VAN, van_b3
+from van import VAN, load_model_weights
 from timm.models.vision_transformer import _cfg
 
 def main(args):
@@ -119,6 +119,7 @@ def main(args):
         )
         
         model.default_cfg = _cfg()
+        model = load_model_weights(model, "van_b3", kwargs)
     else:
         model = model_map[args.model_name]()
         
