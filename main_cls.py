@@ -23,6 +23,7 @@ import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
 from van import VAN, load_model_weights
 from timm.models.vision_transformer import _cfg
+from functools import partial
 
 def main(args):
     set_seed(args)
