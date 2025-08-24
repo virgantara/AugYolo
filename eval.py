@@ -13,7 +13,8 @@ from models import (
     YOLOv8ClsFromYAML, 
     ConvNeXtBTXRD, 
     EfficientNetBTXRD,
-    EfficientNetB4BTXRD
+    EfficientNetB4BTXRD,
+    ResNet50
 )
 import random
 import numpy as np
