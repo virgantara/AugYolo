@@ -118,7 +118,16 @@ def main(args):
         )
         
         model.default_cfg = _cfg()
-        model = load_model_weights(model, "van_b3", kwargs)
+        url = 'https://huggingface.co/Visual-Attention-Network/VAN-Large-original/resolve/main/van_large_839.pth.tar'
+        checkpoint = torch.hub.load_state_dict_from_url(
+            url=url, map_location="cpu", check_hash=True
+        )
+
+        strict = False
+        del checkpoint["state_dict"]["head.weight"]
+        del checkpoint["state_dict"]["head.bias"]
+        model.load_state_dict(checkpoint["state_dict"], strict=strict)
+        
     else:
         model = model_map[args.model_name]()
         
