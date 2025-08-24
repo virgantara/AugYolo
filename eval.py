@@ -32,6 +32,9 @@ from sklearn.metrics import (
 import matplotlib
 matplotlib.use("Agg")  # for headless servers
 import matplotlib.pyplot as plt
+from van import VAN, load_model_weights
+from timm.models.vision_transformer import _cfg
+from functools import partial
 
 
 def compute_imbalanced_metrics(y_true_np, y_pred_np, probs_np, num_classes=3):
@@ -141,7 +144,6 @@ def main(args):
     
     
     model_map = {
-        'van': lambda: VAN(num_classes=3, img_size=608),
         'yolov8': lambda: YOLOv8ClsFromYAML(
             yaml_path='yolov8-cls.yaml',
             scale='n',
@@ -154,7 +156,14 @@ def main(args):
         'resnet50': lambda: ResNet50(num_classes=3, dropout_p=args.dropout)
     }
     
-    model = model_map[args.model_name]()
+    if args.model_name == 'van':
+        model = VAN(
+            img_size=args.img_size,
+            num_classes=3,
+            embed_dims=[64, 128, 320, 512], mlp_ratios=[8, 8, 4, 4],
+            norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 5, 27, 3])
+    else:
+        model = model_map[args.model_name]()
     
     model.load_state_dict(torch.load(args.model_path, weights_only=True))
     model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
