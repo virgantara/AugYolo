@@ -113,9 +113,11 @@ def main(args):
 
     if args.model_name == 'van':
         model = VAN(
-            img_size=608,
-            num_classes=3
-        )
+            img_size=args.img_size,
+            num_classes=3,
+            embed_dims=[64, 128, 320, 512], mlp_ratios=[8, 8, 4, 4],
+            norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 5, 27, 3])
+        
         
         model.default_cfg = _cfg()
         url = 'https://huggingface.co/Visual-Attention-Network/VAN-Large-original/resolve/main/van_large_839.pth.tar'
