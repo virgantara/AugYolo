@@ -113,7 +113,6 @@ def main(args):
 
     if args.model_name == 'van':
         model = VAN(
-            pretrained=True,
             img_size=608,
             num_classes=3
         )
