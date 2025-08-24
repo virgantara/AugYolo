@@ -251,6 +251,8 @@ if __name__ == "__main__":
                         help='Name of the experiment')
     parser.add_argument('--model_name', type=str, default='convnext', metavar='N',
                         help='Name of the model')
+    parser.add_argument('--img_size', type=int, default=608, metavar='img_size',
+                        help='Size of input image)')
     parser.add_argument('--batch_size', type=int, default=32, metavar='batch_size',
                         help='Size of batch)')
     parser.add_argument('--test_batch_size', type=int, default=32, metavar='batch_size',
