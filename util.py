@@ -2,6 +2,33 @@ import torch
 import pandas as pd
 import os
 from openpyxl import load_workbook
+from torchvision import transforms
+from PIL import Image
+import numpy as np
+
+class CLAHE(object):
+    def __init__(self, clip_limit=2.0, tile_grid_size=(8, 8)):
+        self.clip_limit = clip_limit
+        self.tile_grid_size = tile_grid_size
+
+    def __call__(self, img):
+        # Convert PIL -> numpy (RGB)
+        img = np.array(img)
+
+        # Convert to LAB color space
+        lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
+        l, a, b = cv2.split(lab)
+
+        # Apply CLAHE on L-channel
+        clahe = cv2.createCLAHE(clipLimit=self.clip_limit, tileGridSize=self.tile_grid_size)
+        cl = clahe.apply(l)
+
+        # Merge back
+        limg = cv2.merge((cl, a, b))
+        final = cv2.cvtColor(limg, cv2.COLOR_LAB2RGB)
+
+        # Back to PIL
+        return Image.fromarray(final)
 
 def top_k_accuracy(output, target, k=1):
     """Compute the top-k accuracy, but ensure k ≤ number of classes"""

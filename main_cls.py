@@ -4,7 +4,7 @@ from dataset import BoneTumorDataset
 import os
 from torchvision import transforms
 import argparse
-from util import top_k_accuracy
+from util import top_k_accuracy, CLAHE
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import models
@@ -38,17 +38,31 @@ def main(args):
     test_path = os.path.join(DATASET_DIR, 'val.xlsx')  
     IMG_DIR = os.path.join(DATASET_DIR, 'images')
     
-    train_transform = transforms.Compose([
-        transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(20),
-        transforms.ColorJitter(brightness=0.2, contrast=0.2),
-        transforms.ToTensor(),
-        transforms.Normalize(
-            mean=[0.485, 0.456, 0.406],  # ImageNet stats
-            std=[0.229, 0.224, 0.225]
-        )
-    ])
+    if args.use_clahe:
+        train_transform = transforms.Compose([
+            transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
+            CLAHE(clip_limit=2.0, tile_grid_size=(8,8)),
+            transforms.RandomHorizontalFlip(0.5),
+            transforms.RandomRotation(20),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],  # ImageNet stats
+                std=[0.229, 0.224, 0.225]
+            )
+        ])
+    else:
+        train_transform = transforms.Compose([
+            transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
+            transforms.RandomHorizontalFlip(0.5),
+            transforms.RandomRotation(20),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],  # ImageNet stats
+                std=[0.229, 0.224, 0.225]
+            )
+        ])
 
     test_transform = transforms.Compose([
         transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
@@ -272,6 +286,7 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', type=int, default=300, metavar='N',
                         help='number of episode to train')
     parser.add_argument('--use_sgd', action='store_true', default=False, help='Use SGD')
+    parser.add_argument('--use_clahe', action='store_true', default=False, help='Use CLAHE transform')
     parser.add_argument('--use_balanced_weight', action='store_true', default=False, help='Use Weight Balancing')
     parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
                         help='learning rate (default: 0.001, 0.1 if using sgd)')
