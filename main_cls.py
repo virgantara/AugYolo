@@ -39,9 +39,9 @@ def main(args):
     IMG_DIR = os.path.join(DATASET_DIR, 'images')
     
     train_transform = transforms.Compose([
-        transforms.Resize((608, 608)),  # or (384, 384)
+        transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
         transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(15),
+        transforms.RandomRotation(20),
         transforms.ColorJitter(brightness=0.2, contrast=0.2),
         transforms.ToTensor(),
         transforms.Normalize(
@@ -51,7 +51,7 @@ def main(args):
     ])
 
     test_transform = transforms.Compose([
-        transforms.Resize((608, 608)),  # or (384, 384)
+        transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
         transforms.ToTensor(),
         transforms.Normalize(
             mean=[0.485, 0.456, 0.406],  # ImageNet stats
