@@ -312,6 +312,7 @@ if __name__ == "__main__":
                         help='random seed (default: 1)')
     parser.add_argument('--num_worker', type=int, default=4, metavar='S',
                         help='Num of Worker')
+    parser.add_argument('--use_balanced_weight', action='store_true', default=False, help='Use Weight Balancing')
     args = parser.parse_args()
 
     main(args)
