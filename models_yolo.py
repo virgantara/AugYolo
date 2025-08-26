@@ -659,13 +659,13 @@ def guess_model_scale(model_path):
 if __name__== '__main__':
     img_size = 640
     data = torch.rand(2,3,img_size,img_size)
-    cfg = os.path.join('yolo/cfg','models','11','yolo11-cls.yaml')
+    cfg = os.path.join('yolo/cfg','models','v8','yolov8-cls.yaml')
     model = ClassificationModel(cfg, nc=3, ch=3)
     
-    pretrain_path = os.path.join('pretrain','yolo11n-cls.pt')
-    weights = torch.load(pretrain_path, map_location="cpu", weights_only=False)
-    if weights:
-        model.load(weights)
+    # pretrain_path = os.path.join('pretrain','yolo11n-cls.pt')
+    # weights = torch.load(pretrain_path, map_location="cpu", weights_only=False)
+    # if weights:
+    #     model.load(weights)
 
     # for m in model.modules():
     #     if not self.args.pretrained and hasattr(m, "reset_parameters"):

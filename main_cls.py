@@ -186,9 +186,11 @@ def main(args):
     criterion = FocalCE(weight=class_weights if args.use_balanced_weight else None, gamma=2.0)
 
     lr = args.lr if not args.use_sgd else args.lr  # Don't multiply
-    optimizer = (optim.SGD(model.parameters(), lr=lr, momentum=args.momentum, weight_decay=1e-2)
-             if args.use_sgd else
-             optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4))
+
+    if args.use_sgd:
+        optim.SGD(model.parameters(), lr=lr, momentum=args.momentum, weight_decay=1e-5)
+    else:
+        optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
 
     
     # scheduler = CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=args.lr)

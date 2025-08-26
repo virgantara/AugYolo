@@ -23,3 +23,8 @@ conda activate btxrd-env
 ```bash
 python main_cls.py --epochs=300 --batch_size=32 --test_batch_size=32
 ```
+
+1. Run model Yolov8
+```bash
+python main_cls.py --exp_name=exp_yolov8 --img_size=608 --epochs=300 --model_name=yolov8 --batch_size=16 --test_batch_size=16 --seed=42
+```
