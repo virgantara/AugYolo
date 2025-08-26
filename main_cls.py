@@ -27,18 +27,6 @@ from van import VAN, load_model_weights
 from timm.models.vision_transformer import _cfg
 from functools import partial
 
-def load_cls_weights_strict(model, ckpt_path: str):
-    ckpt = torch.load(ckpt_path, map_location='cpu')
-    sd = ckpt.get('model', ckpt.get('state_dict', ckpt))
-    if not isinstance(sd, dict):  # e.g., ckpt['model'] is a nn.Module
-        sd = sd.state_dict()
-    model_sd = model.state_dict()
-    # keep only matching keys & shapes (drop classifier head mismatch)
-    sd = {k: v for k, v in sd.items() if k in model_sd and model_sd[k].shape == v.shape}
-    missing, unexpected = model.load_state_dict(sd, strict=False)
-    print(f"[weights] loaded: {len(sd)} keys | missing: {len(missing)} | unexpected: {len(unexpected)}")
-
-
 def main(args):
     set_seed(args)
     print("Hyper-parameters: {}".format(args.__str__()))
@@ -162,20 +150,35 @@ def main(args):
         del checkpoint["state_dict"]["head.bias"]
         model.load_state_dict(checkpoint["state_dict"], strict=strict)
     elif args.model_name == 'yolov11':
-        cfg = os.path.join('yolo/cfg','models','11','yolo11-cls.yaml')
+        cfg = os.path.join('yolo/cfg','models','11',f'yolo11{args.yolo_scale}-cls.yaml')
         model = ClassificationModel(cfg, nc=3, ch=3)
-        load_cls_weights_strict(model, os.path.join('pretrain','yolo11n-cls.pt'))
+        
+        pretrain_path = os.path.join('pretrain','yolo11n-cls.pt')
+        weights = torch.load(pretrain_path, map_location="cpu", weights_only=False)
+        if weights:
+            model.load(weights)
 
+        for m in model.modules():
+            if isinstance(m, torch.nn.Dropout) and args.dropout:
+                m.p = args.dropout  # set dropout
+        for p in model.parameters():
+            p.requires_grad = True  # for training
     elif args.model_name == 'yolov11lka':
         cfg = os.path.join(args.path_yolo_yaml)
         model = ClassificationModel(cfg, nc=3, ch=3)
-        load_cls_weights_strict(model, os.path.join('pretrain','yolo11n-cls.pt'))
-
+        
+        pretrain_path = os.path.join('pretrain','yolo11n-cls.pt')
+        weights = torch.load(pretrain_path, map_location="cpu", weights_only=False)
+        if weights:
+            model.load(weights)
     elif args.model_name == 'yolov8':
-        cfg = os.path.join('yolo/cfg','models','v8','yolov8-cls.yaml')
+        cfg = os.path.join('yolo/cfg','models','v8',f'yolov8{args.yolo_scale}-cls.yaml')
         model = ClassificationModel(cfg, nc=3, ch=3)
-        load_cls_weights_strict(model, os.path.join('pretrain','yolov8n-cls.pt'))
-
+        
+        pretrain_path = os.path.join('pretrain','yolov8n-cls.pt')
+        weights = torch.load(pretrain_path, map_location="cpu", weights_only=False)
+        if weights:
+            model.load(weights)
     else:
         model = model_map[args.model_name]()
         
@@ -241,18 +244,15 @@ def main(args):
     wandb.finish()
 
 class FocalCE(nn.Module):
-    def __init__(self, weight=None, gamma=2.0, label_smoothing=0.1):
+    def __init__(self, weight=None, gamma=2.0):
         super().__init__()
         self.weight = weight
         self.gamma = gamma
-        self.label_smoothing = label_smoothing
     def forward(self, logits, target):
-        ce = nn.functional.cross_entropy(
-            logits, target, weight=self.weight, reduction='none',
-            label_smoothing=self.label_smoothing
-        )
-        pt = torch.exp(-ce)
-        return (((1 - pt) ** self.gamma) * ce).mean()
+        ce = nn.functional.cross_entropy(logits, target, weight=self.weight, reduction='none')
+        pt = torch.exp(-ce)                # pt = softmax prob of the true class
+        focal = ((1-pt)**self.gamma) * ce
+        return focal.mean()
 
 
 def train_one_epoch(model, dataloader, optimizer, criterion, device):
@@ -344,6 +344,7 @@ if __name__ == "__main__":
                         help='Name of the experiment')
     parser.add_argument('--model_name', type=str, default='convnext', metavar='N',
                         help='Name of the model')
+    parser.add_argument('--yolo_scale', default='n', choices=['n','s','m','l','x'])
     parser.add_argument('--img_size', type=int, default=608, metavar='img_size',
                         help='Size of input image)')
     parser.add_argument('--batch_size', type=int, default=32, metavar='batch_size',
