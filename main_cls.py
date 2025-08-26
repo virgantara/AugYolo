@@ -241,15 +241,18 @@ def main(args):
     wandb.finish()
 
 class FocalCE(nn.Module):
-    def __init__(self, weight=None, gamma=2.0):
+    def __init__(self, weight=None, gamma=2.0, label_smoothing=0.1):
         super().__init__()
         self.weight = weight
         self.gamma = gamma
+        self.label_smoothing = label_smoothing
     def forward(self, logits, target):
-        ce = nn.functional.cross_entropy(logits, target, weight=self.weight, reduction='none')
-        pt = torch.exp(-ce)                # pt = softmax prob of the true class
-        focal = ((1-pt)**self.gamma) * ce
-        return focal.mean()
+        ce = nn.functional.cross_entropy(
+            logits, target, weight=self.weight, reduction='none',
+            label_smoothing=self.label_smoothing
+        )
+        pt = torch.exp(-ce)
+        return (((1 - pt) ** self.gamma) * ce).mean()
 
 
 def train_one_epoch(model, dataloader, optimizer, criterion, device):
