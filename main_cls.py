@@ -179,6 +179,12 @@ def main(args):
         weights = torch.load(pretrain_path, map_location="cpu", weights_only=False)
         if weights:
             model.load(weights)
+
+        for m in model.modules():
+            if isinstance(m, torch.nn.Dropout) and args.dropout:
+                m.p = args.dropout  # set dropout
+        for p in model.parameters():
+            p.requires_grad = True  # for training
     else:
         model = model_map[args.model_name]()
         
