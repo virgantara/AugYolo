@@ -8,6 +8,7 @@ from util import top_k_accuracy, append_row_to_excel
 import torch.nn as nn
 from torchvision import models
 from tqdm import tqdm
+from models_yolo import (ClassificationModel)
 
 from models import (
     YOLOv8ClsFromYAML, 
@@ -162,10 +163,20 @@ def main(args):
             num_classes=3,
             embed_dims=[64, 128, 320, 512], mlp_ratios=[8, 8, 4, 4],
             norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 5, 27, 3])
+        
+        model.load_state_dict(torch.load(args.model_path, weights_only=True))
+    elif args.model_name == 'yolo11':
+        cfg = os.path.join('yolo/cfg','models','11','yolo11-cls.yaml')
+        model = ClassificationModel(cfg, nc=3, ch=3)
+        
+        pretrain_path = os.path.join('pretrain','yolo11n-cls.pt')
+        weights = torch.load(pretrain_path, map_location="cpu", weights_only=False)
+        if weights:
+            model.load(weights)
     else:
         model = model_map[args.model_name]()
+        model.load_state_dict(torch.load(args.model_path, weights_only=True))
     
-    model.load_state_dict(torch.load(args.model_path, weights_only=True))
     model = model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
     print(f"Total parameters: {sum(p.numel() for p in model.parameters()) / 1e6:.2f}M")

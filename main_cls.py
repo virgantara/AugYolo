@@ -168,9 +168,9 @@ def main(args):
         criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
         
     lr = args.lr if not args.use_sgd else args.lr  # Don't multiply
-    optimizer = (optim.SGD(model.parameters(), lr=lr, momentum=args.momentum, weight_decay=1e-4)
+    optimizer = (optim.SGD(model.parameters(), lr=lr, momentum=args.momentum, weight_decay=1e-2)
              if args.use_sgd else
-             optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4))
+             optim.Adam(model.parameters(), lr=lr, weight_decay=1e-2))
 
     
     scheduler = CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=args.lr)
