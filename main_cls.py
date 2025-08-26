@@ -18,6 +18,8 @@ from models import (
     EfficientNetB4BTXRD,
     ResNet50
 )
+
+from models_yolo import (ClassificationModel)
 import random
 import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
@@ -144,7 +146,14 @@ def main(args):
         del checkpoint["state_dict"]["head.weight"]
         del checkpoint["state_dict"]["head.bias"]
         model.load_state_dict(checkpoint["state_dict"], strict=strict)
+    elif args.model_name == 'yolov11':
+        cfg = os.path.join('yolo/cfg','models','11','yolo11-cls.yaml')
+        model = ClassificationModel(cfg, nc=3, ch=3)
         
+        pretrain_path = os.path.join('pretrain','yolo11n-cls.pt')
+        weights = torch.load(pretrain_path, map_location="cpu", weights_only=False)
+        if weights:
+            model.load(weights)
     else:
         model = model_map[args.model_name]()
         
