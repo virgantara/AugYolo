@@ -74,6 +74,17 @@ def compute_imbalanced_metrics(y_true_np, y_pred_np, probs_np, num_classes=3):
     cm = confusion_matrix(y_true_np, y_pred_np, labels=list(range(num_classes)))
     return metrics, cm
 
+def _get_logits(outputs):
+    # Normalize various model return types to a single Tensor of logits
+    if isinstance(outputs, (list, tuple)):
+        return outputs[0]
+    if isinstance(outputs, dict):
+        # common keys to try; fall back to first value
+        for k in ('logits', 'out', 'pred', 'cls'):
+            if k in outputs:
+                return outputs[k]
+        return next(iter(outputs.values()))
+    return outputs  # already a Tensor
 
 def plot_confusion_matrix(cm, class_names):
     fig, ax = plt.subplots(figsize=(5, 4))
@@ -245,6 +256,7 @@ def validate(model, dataloader, criterion, device, class_names=[]):
             images, labels = images.to(device), labels.to(device)
 
             outputs = model(images)  # logits
+            outputs = _get_logits(outputs)
             loss = criterion(outputs, labels)
             running_loss += loss.item() * images.size(0)
 
