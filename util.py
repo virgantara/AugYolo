@@ -1,10 +1,23 @@
 import torch
+import torch.nn as nn
 import pandas as pd
 import os
 from openpyxl import load_workbook
 from torchvision import transforms
 from PIL import Image
 import numpy as np
+
+
+class FocalCE(nn.Module):
+    def __init__(self, weight=None, gamma=2.0):
+        super().__init__()
+        self.weight = weight
+        self.gamma = gamma
+    def forward(self, logits, target):
+        ce = nn.functional.cross_entropy(logits, target, weight=self.weight, reduction='none')
+        pt = torch.exp(-ce)                # pt = softmax prob of the true class
+        focal = ((1-pt)**self.gamma) * ce
+        return focal.mean()
 
 class CLAHE(object):
     def __init__(self, clip_limit=2.0, tile_grid_size=(8, 8)):

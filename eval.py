@@ -4,7 +4,7 @@ from dataset import BoneTumorDataset
 import os
 from torchvision import transforms
 import argparse
-from util import top_k_accuracy, append_row_to_excel
+from util import top_k_accuracy, append_row_to_excel, FocalCE
 import torch.nn as nn
 from torchvision import models
 from tqdm import tqdm
@@ -182,7 +182,19 @@ def main(args):
     print(f"Total parameters: {sum(p.numel() for p in model.parameters()) / 1e6:.2f}M")
     print(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M")
 
-    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+    if args.use_balanced_weight:
+        class_weights = compute_class_weight(
+            class_weight='balanced',
+            classes=[0, 1, 2],
+            y=y_labels  # or collect all labels manually
+        )
+        class_weights = torch.tensor(class_weights, dtype=torch.float).to(device)
+
+        criterion = nn.CrossEntropyLoss(label_smoothing=0.1, weight=class_weights)
+    else:
+        criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+        
+    criterion = FocalCE(weight=class_weights if args.use_balanced_weight else None, gamma=2.0)
 
     val_loss, top1_acc, top5_acc, extra_metrics, cm_image = validate(model, test_loader, criterion, device, class_names=CLASS_NAMES)
     
