@@ -43,8 +43,10 @@ __all__ = (
     "CBFuse",
     "CBLinear",
     "C3k2",
+    "C3k2LKA",
     "C2fPSA",
     "C2PSA",
+    "C2PSALKA",
     "RepVGGDW",
     "CIB",
     "C2fCIB",
@@ -1103,6 +1105,73 @@ class C3f(nn.Module):
         y.extend(m(y[-1]) for m in self.m)
         return self.cv3(torch.cat(y, 1))
 
+class LKA(nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.conv0 = nn.Conv2d(dim, dim, 5, padding=2, groups=dim)
+        self.conv_spatial = nn.Conv2d(dim, dim, 7, stride=1, padding=9, groups=dim, dilation=3)
+        self.conv1 = nn.Conv2d(dim, dim, 1)
+
+
+    def forward(self, x):
+        u = x.clone()        
+        attn = self.conv0(x)
+        attn = self.conv_spatial(attn)
+        attn = self.conv1(attn)
+
+        return u * attn
+
+
+class AttentionLKA(nn.Module):
+    def __init__(self, d_model):
+        super().__init__()
+
+        self.proj_1 = nn.Conv2d(d_model, d_model, 1)
+        self.activation = nn.GELU()
+        self.spatial_gating_unit = LKA(d_model)
+        self.proj_2 = nn.Conv2d(d_model, d_model, 1)
+
+    def forward(self, x):
+        shorcut = x.clone()
+        x = self.proj_1(x)
+        x = self.activation(x)
+        x = self.spatial_gating_unit(x)
+        x = self.proj_2(x)
+        x = x + shorcut
+        return x
+
+
+class C3k2LKA(C2f):
+    """Faster Implementation of CSP Bottleneck with 2 convolutions."""
+
+    def __init__(
+        self, c1: int, c2: int, n: int = 1, c3k: bool = False, e: float = 0.5, g: int = 1, shortcut: bool = True
+    ):
+        """
+        Initialize C3k2 module.
+
+        Args:
+            c1 (int): Input channels.
+            c2 (int): Output channels.
+            n (int): Number of blocks.
+            c3k (bool): Whether to use C3k blocks.
+            e (float): Expansion ratio.
+            g (int): Groups for convolutions.
+            shortcut (bool): Whether to use shortcut connections.
+        """
+        super().__init__(c1, c2, n, shortcut, g, e)
+        self.m = nn.ModuleList(
+            C3k(self.c, self.c, 2, shortcut, g) if c3k else Bottleneck(self.c, self.c, shortcut, g) for _ in range(n)
+        )
+
+        self.lka = AttentionLKA(self.c)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # same CSP flow as C2f forward
+        y = list(self.cv1(x).chunk(2, 1))                            # a, b
+        y.extend(m(y[-1]) for m in self.m)                           # processed branch grows
+        y[-1] = self.lka(y[-1])                                      # <-- LKA right here
+        return self.cv2(torch.cat(y, 1))            
 
 class C3k2(C2f):
     """Faster Implementation of CSP Bottleneck with 2 convolutions."""
@@ -1471,6 +1540,55 @@ class PSA(nn.Module):
         b = b + self.ffn(b)
         return self.cv2(torch.cat((a, b), 1))
 
+
+class C2PSALKA(nn.Module):
+
+
+    def __init__(self, c1: int, c2: int, n: int = 1, e: float = 0.5):
+        """
+        Initialize C2PSA module.
+
+        Args:
+            c1 (int): Input channels.
+            c2 (int): Output channels.
+            n (int): Number of PSABlock modules.
+            e (float): Expansion ratio.
+        """
+        super().__init__()
+        assert c1 == c2
+        self.c = int(c1 * e)
+        self.cv1 = Conv(c1, 2 * self.c, 1, 1)
+        self.cv2 = Conv(2 * self.c, c1, 1)
+
+        self.m = nn.Sequential(*(PSABlock(self.c, attn_ratio=0.5, num_heads=self.c // 64) for _ in range(n)))
+
+        # LKA bits
+        use_lka = True
+        self.use_lka = use_lka
+        # assert lka_pos in ('pre', 'post')
+        self.lka_pos = 'post'
+        self.lka = AttentionLKA(self.c) if use_lka else nn.Identity()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Process the input tensor through a series of PSA blocks.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            (torch.Tensor): Output tensor after processing.
+        """
+        a, b = self.cv1(x).split((self.c, self.c), dim=1)
+        if self.use_lka and self.lka_pos == 'pre':
+            b = self.lka(b)          # LKA before PSA (optional)
+
+        b = self.m(b)                # PSA stack
+
+        if self.use_lka and self.lka_pos == 'post':
+            b = self.lka(b)          # LKA after PSA (default)
+
+        return self.cv2(torch.cat((a, b), 1))
 
 class C2PSA(nn.Module):
     """

@@ -16,6 +16,7 @@ from yolo.nn.modules import (
     C1,
     C2,
     C2PSA,
+    C2PSALKA,
     C3,
     C3TR,
     ELAN1,
@@ -35,6 +36,7 @@ from yolo.nn.modules import (
     C2fPSA,
     C3Ghost,
     C3k2,
+    C3k2LKA,
     C3x,
     CBFuse,
     CBLinear,
@@ -511,6 +513,7 @@ def parse_model(d, ch, verbose=True):
             SPPF,
             C2fPSA,
             C2PSA,
+            C2PSALKA,
             DWConv,
             Focus,
             BottleneckCSP,
@@ -535,6 +538,7 @@ def parse_model(d, ch, verbose=True):
             SCDown,
             C2fCIB,
             A2C2f,
+            C3k2LKA
         }
     )
     repeat_modules = frozenset(  # modules with 'repeat' arguments
@@ -554,6 +558,7 @@ def parse_model(d, ch, verbose=True):
             C2fCIB,
             C2PSA,
             A2C2f,
+            C3k2LKA,
         }
     )
     for i, (f, n, m, args) in enumerate(d["backbone"] + d["head"]):  # from, number, module, args
@@ -659,7 +664,7 @@ def guess_model_scale(model_path):
 if __name__== '__main__':
     img_size = 640
     data = torch.rand(2,3,img_size,img_size)
-    cfg = os.path.join('yolo/cfg','models','v8','yolov8-cls.yaml')
+    cfg = os.path.join('yolo/cfg','models','11','yolo11-cls-lka.yaml')
     model = ClassificationModel(cfg, nc=3, ch=3)
     
     # pretrain_path = os.path.join('pretrain','yolo11n-cls.pt')

@@ -153,6 +153,14 @@ def main(args):
         weights = torch.load(pretrain_path, map_location="cpu", weights_only=False)
         if weights:
             model.load(weights)
+    elif args.model_name == 'yolov11lka':
+        cfg = os.path.join(args.path_yolo_yaml)
+        model = ClassificationModel(cfg, nc=3, ch=3)
+        
+        pretrain_path = os.path.join('pretrain','yolo11n-cls.pt')
+        weights = torch.load(pretrain_path, map_location="cpu", weights_only=False)
+        if weights:
+            model.load(weights)
     elif args.model_name == 'yolov8':
         cfg = os.path.join('yolo/cfg','models','v8','yolov8-cls.yaml')
         model = ClassificationModel(cfg, nc=3, ch=3)
@@ -321,6 +329,8 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
     parser.add_argument('--pretrain_path', type=str, default='pretrain/yolov8n-cls.pt', metavar='N',
+                        help='Name of the experiment')
+    parser.add_argument('--path_yolo_yaml', type=str, default='yolo/cfg/models/11/yolo11-cls-lka.yaml', metavar='N',
                         help='Name of the experiment')
     parser.add_argument('--model_name', type=str, default='convnext', metavar='N',
                         help='Name of the model')
