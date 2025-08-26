@@ -115,12 +115,12 @@ def main(args):
     wandb_log = {}  
 
     model_map = {
-        'yolov8': lambda: YOLOv8ClsFromYAML(
-            yaml_path='yolov8-cls.yaml',
-            scale='n',
-            num_classes=3,
-            pretrained=args.pretrain_path
-        ),
+        # 'yolov8': lambda: YOLOv8ClsFromYAML(
+        #     yaml_path='yolov8-cls.yaml',
+        #     scale='n',
+        #     num_classes=3,
+        #     pretrained=args.pretrain_path
+        # ),
         'convnext': lambda: ConvNeXtBTXRD(num_classes=3),
         'efficientnetb0': lambda: EfficientNetBTXRD(num_classes=3, dropout_p=args.dropout),
         'efficientnetb4': lambda: EfficientNetB4BTXRD(num_classes=3, dropout_p=args.dropout),
@@ -150,6 +150,14 @@ def main(args):
         model = ClassificationModel(cfg, nc=3, ch=3)
         
         pretrain_path = os.path.join('pretrain','yolo11n-cls.pt')
+        weights = torch.load(pretrain_path, map_location="cpu", weights_only=False)
+        if weights:
+            model.load(weights)
+    elif args.model_name == 'yolov8':
+        cfg = os.path.join('yolo/cfg','models','v8','yolov8-cls.yaml')
+        model = ClassificationModel(cfg, nc=3, ch=3)
+        
+        pretrain_path = os.path.join('pretrain','yolov8n-cls.pt')
         weights = torch.load(pretrain_path, map_location="cpu", weights_only=False)
         if weights:
             model.load(weights)
