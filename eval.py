@@ -165,7 +165,7 @@ def main(args):
             norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 5, 27, 3])
         
         model.load_state_dict(torch.load(args.model_path, weights_only=True))
-    elif args.model_name == 'yolo11':
+    elif args.model_name == 'yolov11':
         cfg = os.path.join('yolo/cfg','models','11','yolo11-cls.yaml')
         model = ClassificationModel(cfg, nc=3, ch=3)
         
