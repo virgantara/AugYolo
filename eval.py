@@ -156,12 +156,12 @@ def main(args):
     
     
     model_map = {
-        'yolov8': lambda: YOLOv8ClsFromYAML(
-            yaml_path='yolov8-cls.yaml',
-            scale='n',
-            num_classes=3,
-            pretrained=args.pretrain_path
-        ),
+        # 'yolov8': lambda: YOLOv8ClsFromYAML(
+        #     yaml_path='yolov8-cls.yaml',
+        #     scale='n',
+        #     num_classes=3,
+        #     pretrained=args.pretrain_path
+        # ),
         'convnext': lambda: ConvNeXtBTXRD(num_classes=3),
         'efficientnetb0': lambda: EfficientNetBTXRD(num_classes=3, dropout_p=args.dropout),
         'efficientnetb4': lambda: EfficientNetB4BTXRD(num_classes=3, dropout_p=args.dropout),
@@ -178,6 +178,10 @@ def main(args):
         model.load_state_dict(torch.load(args.model_path, weights_only=True))
     elif args.model_name == 'yolov11':
         cfg = os.path.join('yolo/cfg','models','11','yolo11-cls.yaml')
+        model = ClassificationModel(cfg, nc=3, ch=3)
+        model.load_state_dict(torch.load(args.model_path, weights_only=True))
+    elif args.model_name == 'yolov8':
+        cfg = os.path.join('yolo/cfg','models','v8','yolov8-cls.yaml')
         model = ClassificationModel(cfg, nc=3, ch=3)
         model.load_state_dict(torch.load(args.model_path, weights_only=True))
     else:
