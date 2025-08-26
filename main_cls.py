@@ -46,7 +46,7 @@ def main(args):
             CLAHE(clip_limit=2.0, tile_grid_size=(8,8)),
             transforms.RandomHorizontalFlip(0.5),
             transforms.RandomRotation(20),
-            transforms.ColorJitter(brightness=0.2, contrast=0.2),
+
             transforms.ToTensor(),
             transforms.Normalize(
                 mean=[0.485, 0.456, 0.406],  # ImageNet stats
@@ -58,7 +58,6 @@ def main(args):
             transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
             transforms.RandomHorizontalFlip(0.5),
             transforms.RandomRotation(20),
-            transforms.ColorJitter(brightness=0.2, contrast=0.2),
             transforms.ToTensor(),
             transforms.Normalize(
                 mean=[0.485, 0.456, 0.406],  # ImageNet stats
@@ -176,13 +175,16 @@ def main(args):
     else:
         criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
         
+    criterion = FocalCE(weight=class_weights if args.use_balanced_weight else None, gamma=2.0)
+
     lr = args.lr if not args.use_sgd else args.lr  # Don't multiply
     optimizer = (optim.SGD(model.parameters(), lr=lr, momentum=args.momentum, weight_decay=1e-2)
              if args.use_sgd else
-             optim.Adam(model.parameters(), lr=lr, weight_decay=1e-2))
+             optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4))
 
     
-    scheduler = CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=args.lr)
+    # scheduler = CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=args.lr)
+    scheduler = CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=max(args.lr*1e-2, 1e-6))
 
     best_top1_acc = 0.0
     best_model_state = None
@@ -212,6 +214,18 @@ def main(args):
             print(f"Best model saved at epoch {epoch+1} with Top-1 Acc: {top1_acc:.4f}")
 
     wandb.finish()
+
+class FocalCE(nn.Module):
+    def __init__(self, weight=None, gamma=2.0):
+        super().__init__()
+        self.weight = weight
+        self.gamma = gamma
+    def forward(self, logits, target):
+        ce = nn.functional.cross_entropy(logits, target, weight=self.weight, reduction='none')
+        pt = torch.exp(-ce)                # pt = softmax prob of the true class
+        focal = ((1-pt)**self.gamma) * ce
+        return focal.mean()
+
 
 def train_one_epoch(model, dataloader, optimizer, criterion, device):
     model.train()
