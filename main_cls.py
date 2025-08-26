@@ -27,6 +27,18 @@ from van import VAN, load_model_weights
 from timm.models.vision_transformer import _cfg
 from functools import partial
 
+def load_cls_weights_strict(model, ckpt_path: str):
+    ckpt = torch.load(ckpt_path, map_location='cpu')
+    sd = ckpt.get('model', ckpt.get('state_dict', ckpt))
+    if not isinstance(sd, dict):  # e.g., ckpt['model'] is a nn.Module
+        sd = sd.state_dict()
+    model_sd = model.state_dict()
+    # keep only matching keys & shapes (drop classifier head mismatch)
+    sd = {k: v for k, v in sd.items() if k in model_sd and model_sd[k].shape == v.shape}
+    missing, unexpected = model.load_state_dict(sd, strict=False)
+    print(f"[weights] loaded: {len(sd)} keys | missing: {len(missing)} | unexpected: {len(unexpected)}")
+
+
 def main(args):
     set_seed(args)
     print("Hyper-parameters: {}".format(args.__str__()))
@@ -39,11 +51,13 @@ def main(args):
     train_path = os.path.join(DATASET_DIR, 'train.xlsx')
     test_path = os.path.join(DATASET_DIR, 'val.xlsx')  
     IMG_DIR = os.path.join(DATASET_DIR, 'images')
-    
+    to_rgb = transforms.Grayscale(num_output_channels=3)
     if args.use_clahe:
+
         train_transform = transforms.Compose([
             transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
-            CLAHE(clip_limit=2.0, tile_grid_size=(8,8)),
+            to_rgb,
+            CLAHE(clip_limit=2.0, tile_grid_size=(8,8)) if args.use_clahe else transforms.Lambda(lambda x: x),
             transforms.RandomHorizontalFlip(0.5),
             transforms.RandomRotation(20),
 
@@ -56,6 +70,7 @@ def main(args):
     else:
         train_transform = transforms.Compose([
             transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
+            to_rgb,
             transforms.RandomHorizontalFlip(0.5),
             transforms.RandomRotation(20),
             transforms.ToTensor(),
@@ -67,6 +82,7 @@ def main(args):
 
     test_transform = transforms.Compose([
         transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
+        to_rgb,
         transforms.ToTensor(),
         transforms.Normalize(
             mean=[0.485, 0.456, 0.406],  # ImageNet stats
@@ -148,27 +164,18 @@ def main(args):
     elif args.model_name == 'yolov11':
         cfg = os.path.join('yolo/cfg','models','11','yolo11-cls.yaml')
         model = ClassificationModel(cfg, nc=3, ch=3)
-        
-        pretrain_path = os.path.join('pretrain','yolo11n-cls.pt')
-        weights = torch.load(pretrain_path, map_location="cpu", weights_only=False)
-        if weights:
-            model.load(weights)
+        load_cls_weights_strict(model, os.path.join('pretrain','yolo11n-cls.pt'))
+
     elif args.model_name == 'yolov11lka':
         cfg = os.path.join(args.path_yolo_yaml)
         model = ClassificationModel(cfg, nc=3, ch=3)
-        
-        pretrain_path = os.path.join('pretrain','yolo11n-cls.pt')
-        weights = torch.load(pretrain_path, map_location="cpu", weights_only=False)
-        if weights:
-            model.load(weights)
+        load_cls_weights_strict(model, os.path.join('pretrain','yolo11n-cls.pt'))
+
     elif args.model_name == 'yolov8':
         cfg = os.path.join('yolo/cfg','models','v8','yolov8-cls.yaml')
         model = ClassificationModel(cfg, nc=3, ch=3)
-        
-        pretrain_path = os.path.join('pretrain','yolov8n-cls.pt')
-        weights = torch.load(pretrain_path, map_location="cpu", weights_only=False)
-        if weights:
-            model.load(weights)
+        load_cls_weights_strict(model, os.path.join('pretrain','yolov8n-cls.pt'))
+
     else:
         model = model_map[args.model_name]()
         
