@@ -222,6 +222,7 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device):
 
         optimizer.zero_grad()
         outputs = model(images)
+        outputs = _get_logits(outputs)
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
@@ -245,6 +246,7 @@ def validate(model, dataloader, criterion, device):
             images, labels = images.to(device), labels.to(device)
 
             outputs = model(images)
+            outputs = _get_logits(outputs)
             loss = criterion(outputs, labels)
             running_loss += loss.item() * images.size(0)
 
@@ -259,6 +261,18 @@ def validate(model, dataloader, criterion, device):
     top5_acc = top5_total / len(dataloader.dataset)
 
     return epoch_loss, top1_acc, top5_acc
+
+def _get_logits(outputs):
+    # Normalize various model return types to a single Tensor of logits
+    if isinstance(outputs, (list, tuple)):
+        return outputs[0]
+    if isinstance(outputs, dict):
+        # common keys to try; fall back to first value
+        for k in ('logits', 'out', 'pred', 'cls'):
+            if k in outputs:
+                return outputs[k]
+        return next(iter(outputs.values()))
+    return outputs  # already a Tensor
 
 def _init_():
 
