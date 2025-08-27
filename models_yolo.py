@@ -666,7 +666,8 @@ def guess_model_scale(model_path):
 if __name__== '__main__':
     img_size = 640
     data = torch.rand(2,3,img_size,img_size)
-    cfg = os.path.join('yolo/cfg','models','v8','yolov8-cls-doconv.yaml')
+    # cfg = os.path.join('yolo/cfg','models','v8','yolov8-cls-doconv.yaml')
+    cfg = os.path.join('yolo/cfg','models','v8','yolov8-cls.yaml')
     model = ClassificationModel(cfg, nc=3, ch=3)
     
 
