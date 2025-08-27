@@ -210,7 +210,7 @@ class DOConv2d(nn.Module):
             out_channels=c2, 
             kernel_size=k, 
             stride=s, 
-            D_mul=None, 
+            D_mul=3, 
             padding=autopad(k, p, d), 
             dilation=d, 
             groups=g,
