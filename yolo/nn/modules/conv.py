@@ -44,12 +44,15 @@ def autopad(k, p=None, d=1):  # kernel, padding, dilation
         p = k // 2 if isinstance(k, int) else [x // 2 for x in k]  # auto-pad
     return p
 
+
 def _ntuple(n):
     def parse(x):
-        if isinstance(x, (list, tuple)):
-            return tuple(x)
+        if isinstance(x, collections.abc.Iterable):
+            return x
         return tuple(repeat(x, n))
+
     return parse
+
 
 _pair = _ntuple(2)
 
@@ -202,7 +205,17 @@ class DOConv2d(nn.Module):
             act (bool | nn.Module): Activation function.
         """
         super().__init__()
-        self.conv = LibDOConv2d(c1, c2, k, s, autopad(k, p, d), groups=g, dilation=d, bias=False)
+        self.conv = LibDOConv2d(
+            in_channels=c1, 
+            out_channels=c2, 
+            kernel_size=k, 
+            stride=s, 
+            D_mul=128, 
+            padding=autopad(k, p, d), 
+            dilation=d, 
+            groups=g,
+            bias=False
+        )
         self.bn = nn.BatchNorm2d(c2)
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
 
