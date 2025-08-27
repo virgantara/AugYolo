@@ -185,6 +185,20 @@ def main(args):
                 m.p = args.dropout  # set dropout
         for p in model.parameters():
             p.requires_grad = True  # for training
+    elif args.model_name == 'yolov8doconv':
+        cfg = os.path.join('yolo/cfg','models','v8',f'yolov8{args.yolo_scale}-cls-doconv.yaml')
+        model = ClassificationModel(cfg, nc=3, ch=3)
+        
+        pretrain_path = os.path.join('pretrain','yolov8n-cls.pt')
+        weights = torch.load(pretrain_path, map_location="cpu", weights_only=False)
+        if weights:
+            model.load(weights)
+
+        for m in model.modules():
+            if isinstance(m, torch.nn.Dropout) and args.dropout:
+                m.p = args.dropout  # set dropout
+        # for p in model.parameters():
+        #     p.requires_grad = True  # for training
     else:
         model = model_map[args.model_name]()
         

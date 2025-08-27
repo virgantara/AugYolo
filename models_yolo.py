@@ -44,6 +44,7 @@ from yolo.nn.modules import (
     Concat,
     Conv,
     Conv2,
+    DOConv2d,
     ConvTranspose,
     Detect,
     DWConv,
@@ -505,6 +506,7 @@ def parse_model(d, ch, verbose=True):
         {
             Classify,
             Conv,
+            DOConv2d,
             ConvTranspose,
             GhostConv,
             Bottleneck,
@@ -664,26 +666,9 @@ def guess_model_scale(model_path):
 if __name__== '__main__':
     img_size = 640
     data = torch.rand(2,3,img_size,img_size)
-    cfg = os.path.join('yolo/cfg','models','11','yolo11-cls.yaml')
+    cfg = os.path.join('yolo/cfg','models','v8','yolov8-cls-doconv.yaml')
     model = ClassificationModel(cfg, nc=3, ch=3)
     
-    # pretrain_path = os.path.join('pretrain','yolo11n-cls.pt')
-    # weights = torch.load(pretrain_path, map_location="cpu", weights_only=False)
-    # if weights:
-    #     model.load(weights)
-
-    # for m in model.modules():
-    #     if not self.args.pretrained and hasattr(m, "reset_parameters"):
-    #         m.reset_parameters()
-    #     if isinstance(m, torch.nn.Dropout) and self.args.dropout:
-    #         m.p = self.args.dropout  # set dropout
-    # for p in model.parameters():
-    #     p.requires_grad = True  # for training
-    
-    # model = VAN(
-    #     img_size=img_size,
-    #     num_classes=3
-    # )
 
     output = model(data)
     print(output.size())

@@ -68,6 +68,7 @@ from .conv import (
     Concat,
     Conv,
     Conv2,
+    DOConv2d,
     ConvTranspose,
     DWConv,
     DWConvTranspose2d,
@@ -107,6 +108,7 @@ from .transformer import (
 __all__ = (
     "Conv",
     "Conv2",
+    "DOConv2d",
     "LightConv",
     "RepConv",
     "DWConv",
