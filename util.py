@@ -21,28 +21,62 @@ class FocalCE(nn.Module):
         return focal.mean()
 
 class CLAHE(object):
-    def __init__(self, clip_limit=2.0, tile_grid_size=(8, 8)):
-        self.clip_limit = clip_limit
-        self.tile_grid_size = tile_grid_size
+    """
+    CLAHE transform for PIL Images.
+    - Apply BEFORE ToTensor().
+    - Works with grayscale or RGB PIL Images.
+    - Use `p < 1.0` to make it a stochastic augmentation.
+    """
+    def __init__(self, clip_limit=2.0, tile_grid_size=(8, 8), p=1.0, mode='lab'):
+        """
+        Args:
+            clip_limit (float): CLAHE clip limit (try 1.5–2.5 for X-ray).
+            tile_grid_size (tuple): tile size (try (8,8) or (12,12)).
+            p (float): probability to apply CLAHE.
+            mode (str): 'lab' for RGB via LAB on L-channel, 'gray' for single-channel.
+        """
+        self.clip_limit = float(clip_limit)
+        self.tile_grid_size = tuple(tile_grid_size)
+        self.p = float(p)
+        self.mode = mode
 
-    def __call__(self, img):
-        # Convert PIL -> numpy (RGB)
-        img = np.array(img)
+    def __call__(self, img: Image.Image) -> Image.Image:
+        if random.random() > self.p:
+            return img
 
-        # Convert to LAB color space
-        lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
-        l, a, b = cv2.split(lab)
+        # Convert PIL -> numpy
+        arr = np.array(img)
 
-        # Apply CLAHE on L-channel
-        clahe = cv2.createCLAHE(clipLimit=self.clip_limit, tileGridSize=self.tile_grid_size)
-        cl = clahe.apply(l)
+        # Handle grayscale vs RGB
+        if arr.ndim == 2:  # grayscale (H,W)
+            # Direct CLAHE on gray
+            clahe = cv2.createCLAHE(clipLimit=self.clip_limit, tileGridSize=self.tile_grid_size)
+            cl = clahe.apply(arr)
+            out = cl
+            # keep as single-channel PIL; you can replicate to 3ch later if needed
+            return Image.fromarray(out)
 
-        # Merge back
-        limg = cv2.merge((cl, a, b))
-        final = cv2.cvtColor(limg, cv2.COLOR_LAB2RGB)
-
-        # Back to PIL
-        return Image.fromarray(final)
+        elif arr.ndim == 3 and arr.shape[2] == 3:
+            if self.mode == 'lab':
+                lab = cv2.cvtColor(arr, cv2.COLOR_RGB2LAB)
+                l, a, b = cv2.split(lab)
+                clahe = cv2.createCLAHE(clipLimit=self.clip_limit, tileGridSize=self.tile_grid_size)
+                cl = clahe.apply(l)
+                limg = cv2.merge((cl, a, b))
+                out = cv2.cvtColor(limg, cv2.COLOR_LAB2RGB)
+                return Image.fromarray(out)
+            elif self.mode == 'gray':
+                # Convert to gray, apply CLAHE, then back to 3ch
+                gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
+                clahe = cv2.createCLAHE(clipLimit=self.clip_limit, tileGridSize=self.tile_grid_size)
+                cl = clahe.apply(gray)
+                out = np.stack([cl, cl, cl], axis=2)
+                return Image.fromarray(out)
+            else:
+                return img  # unknown mode → no-op
+        else:
+            # Unexpected shape → no-op
+            return img
 
 def top_k_accuracy(output, target, k=1):
     """Compute the top-k accuracy, but ensure k ≤ number of classes"""
