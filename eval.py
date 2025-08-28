@@ -4,7 +4,7 @@ from dataset import BoneTumorDataset
 import os
 from torchvision import transforms
 import argparse
-from util import top_k_accuracy, append_row_to_excel, FocalCE
+from util import top_k_accuracy, append_row_to_excel, FocalCE, CLAHE
 import torch.nn as nn
 from torchvision import models
 from tqdm import tqdm
