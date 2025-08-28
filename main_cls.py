@@ -40,25 +40,9 @@ def main(args):
     test_path = os.path.join(DATASET_DIR, 'val.xlsx')  
     IMG_DIR = os.path.join(DATASET_DIR, 'images')
     to_rgb = transforms.Grayscale(num_output_channels=3)
-    if args.use_clahe:
-
+    if args.use_clahe == 'A':
         train_transform = transforms.Compose([
             transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
-            to_rgb,
-            CLAHE(clip_limit=2.0, tile_grid_size=(8,8)) if args.use_clahe else transforms.Lambda(lambda x: x),
-            transforms.RandomHorizontalFlip(0.5),
-            transforms.RandomRotation(20),
-
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],  # ImageNet stats
-                std=[0.229, 0.224, 0.225]
-            )
-        ])
-    else:
-        train_transform = transforms.Compose([
-            transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
-            to_rgb,
             transforms.RandomHorizontalFlip(0.5),
             transforms.RandomRotation(20),
             transforms.ToTensor(),
@@ -68,16 +52,59 @@ def main(args):
             )
         ])
 
-    test_transform = transforms.Compose([
-        transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
-        to_rgb,
-        transforms.ToTensor(),
-        transforms.Normalize(
-            mean=[0.485, 0.456, 0.406],  # ImageNet stats
-            std=[0.229, 0.224, 0.225]
-        )
-    ])
+        test_transform = transforms.Compose([
+            transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],  # ImageNet stats
+                std=[0.229, 0.224, 0.225]
+            )
+        ])
 
+        
+    elif args.use_clahe == 'B':
+        train_transform = transforms.Compose([
+            CLAHE(clip_limit=2.0, tile_grid_size=(8,8), p=0.25) if args.use_clahe else transforms.Lambda(lambda x: x),
+            transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
+            transforms.RandomHorizontalFlip(0.5),
+            transforms.RandomRotation(20),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],  # ImageNet stats
+                std=[0.229, 0.224, 0.225]
+            )
+        ])
+
+        test_transform = transforms.Compose([
+            transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],  # ImageNet stats
+                std=[0.229, 0.224, 0.225]
+            )
+        ])
+    elif args.use_clahe == 'C':
+        preprocess = transforms.Compose([
+            CLAHE(clip_limit=2.0, tile_grid_size=(8,8), p=1.0),
+            transforms.Resize((args.img_size, args.img_size))
+        ])
+        train_transform = transforms.Compose([
+            preprocess,
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomRotation(10),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485,0.456,0.406],
+                                 std=[0.229,0.224,0.225])
+        ])
+        
+        test_transform = transforms.Compose([
+            preprocess,
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],  # ImageNet stats
+                std=[0.229, 0.224, 0.225]
+            )
+        ])
     train_dataset = BoneTumorDataset(
         split_xlsx_path=train_path,
         metadata_xlsx_path=metadata_xlsx_path,
@@ -374,7 +401,7 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', type=int, default=300, metavar='N',
                         help='number of episode to train')
     parser.add_argument('--use_sgd', action='store_true', default=False, help='Use SGD')
-    parser.add_argument('--use_clahe', action='store_true', default=False, help='Use CLAHE transform')
+    parser.add_argument('--use_clahe', default='A', choices=['A','B','C'],help='A=no clahe, B=clahe as weak aug, C=clahe as preprocessing')
     parser.add_argument('--use_balanced_weight', action='store_true', default=False, help='Use Weight Balancing')
     parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
                         help='learning rate (default: 0.001, 0.1 if using sgd)')
