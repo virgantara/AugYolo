@@ -124,14 +124,43 @@ def main(args):
     test_path = os.path.join(DATASET_DIR, 'val.xlsx')  
     IMG_DIR = os.path.join(DATASET_DIR, 'images')
     
-    test_transform = transforms.Compose([
-        transforms.Resize((608, 608)),  # or (384, 384)
-        transforms.ToTensor(),
-        transforms.Normalize(
-            mean=[0.485, 0.456, 0.406],  # ImageNet stats
-            std=[0.229, 0.224, 0.225]
-        )
-    ])
+    if args.use_clahe == 'A':
+
+        test_transform = transforms.Compose([
+            transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],  # ImageNet stats
+                std=[0.229, 0.224, 0.225]
+            )
+        ])
+
+        
+    elif args.use_clahe == 'B':
+
+        test_transform = transforms.Compose([
+            transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],  # ImageNet stats
+                std=[0.229, 0.224, 0.225]
+            )
+        ])
+    elif args.use_clahe == 'C':
+        preprocess = transforms.Compose([
+            CLAHE(clip_limit=2.0, tile_grid_size=(8,8), p=1.0),
+            transforms.Resize((args.img_size, args.img_size))
+        ])
+
+        test_transform = transforms.Compose([
+            preprocess,
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],  # ImageNet stats
+                std=[0.229, 0.224, 0.225]
+            )
+        ])
+    
 
     test_dataset = BoneTumorDataset(
         split_xlsx_path=test_path,
@@ -308,6 +337,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='BTXRD Classification')
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
+    parser.add_argument('--use_clahe', default='A', choices=['A','B','C'],help='A=no clahe, B=clahe as weak aug, C=clahe as preprocessing')
     parser.add_argument('--img_size', type=int, default=608, metavar='img_size',
                         help='Size of input image)')
     parser.add_argument('--model_path', type=str, default='checkpoints/exp/best_model.pth', metavar='N',

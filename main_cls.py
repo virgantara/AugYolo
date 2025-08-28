@@ -4,7 +4,7 @@ from dataset import BoneTumorDataset
 import os
 from torchvision import transforms
 import argparse
-from util import top_k_accuracy, CLAHE
+from util import top_k_accuracy, CLAHE, FocalCE
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import models
@@ -290,16 +290,6 @@ def main(args):
 
     wandb.finish()
 
-class FocalCE(nn.Module):
-    def __init__(self, weight=None, gamma=2.0):
-        super().__init__()
-        self.weight = weight
-        self.gamma = gamma
-    def forward(self, logits, target):
-        ce = nn.functional.cross_entropy(logits, target, weight=self.weight, reduction='none')
-        pt = torch.exp(-ce)                # pt = softmax prob of the true class
-        focal = ((1-pt)**self.gamma) * ce
-        return focal.mean()
 
 
 def train_one_epoch(model, dataloader, optimizer, criterion, device):
