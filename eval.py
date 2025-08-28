@@ -206,11 +206,11 @@ def main(args):
         
         model.load_state_dict(torch.load(args.model_path, weights_only=True))
     elif args.model_name == 'yolov11':
-        cfg = os.path.join('yolo/cfg','models','11','yolo11-cls.yaml')
+        cfg = os.path.join('yolo/cfg','models','11',f'yolo11{args.yolo_scale}-cls.yaml')
         model = ClassificationModel(cfg, nc=3, ch=3)
         model.load_state_dict(torch.load(args.model_path, weights_only=True))
     elif args.model_name == 'yolov8':
-        cfg = os.path.join('yolo/cfg','models','v8','yolov8-cls.yaml')
+        cfg = os.path.join('yolo/cfg','models','v8',f'yolov8{args.yolo_scale}-cls.yaml')
         model = ClassificationModel(cfg, nc=3, ch=3)
         model.load_state_dict(torch.load(args.model_path, weights_only=True))
     else:
@@ -346,6 +346,7 @@ if __name__ == "__main__":
                         help='Name of the model')
     parser.add_argument('--test_batch_size', type=int, default=32, metavar='batch_size',
                         help='Size of batch)')
+    parser.add_argument('--yolo_scale', default='n', choices=['n','s','m','l','x'])
     parser.add_argument('--no_cuda', type=bool, default=False,
                         help='enables CUDA training')
     parser.add_argument('--dropout', type=float, default=0.4, metavar='LR',
