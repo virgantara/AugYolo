@@ -329,7 +329,7 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', type=int, default=300, metavar='N',
                         help='number of episode to train')
     parser.add_argument('--use_sgd', action='store_true', default=False, help='Use SGD')
-    parser.add_argument('--scenario', default='A', choices=['A','B','C','D'],help='A=no clahe, B=clahe as weak aug, C=clahe as preprocessing')
+    parser.add_argument('--scenario', default='A', type=str,help='A=no clahe, B=clahe as weak aug, C=clahe as preprocessing')
     parser.add_argument('--use_balanced_weight', action='store_true', default=False, help='Use Weight Balancing')
     parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
                         help='learning rate (default: 0.001, 0.1 if using sgd)')
