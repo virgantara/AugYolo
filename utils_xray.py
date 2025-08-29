@@ -28,13 +28,10 @@ class UnsharpMask:
             mask[np.abs(mask) < self.threshold] = 0
         sharp = cv2.addWeighted(arr, 1.0, mask, self.amount, 0)
         return Image.fromarray(sharp).convert('RGB')  # replicate to 3ch for ImageNet models
-
 class WaveletDenoise:
     """
-    BayesShrink soft-thresholding in wavelet domain.
-    wavelet: 'db2', 'db3', 'sym4' often work well
-    level: decomposition levels (2–4 for 512–1024px)
-    p: probability to apply
+    BayesShrink soft-thresholding in wavelet domain for grayscale images.
+    Ensures detail coefficients are passed back to waverec2 as 3-tuples.
     """
     def __init__(self, wavelet='db2', level=2, p=1.0):
         self.wavelet = wavelet
@@ -44,24 +41,38 @@ class WaveletDenoise:
     def __call__(self, img):
         if np.random.rand() > self.p:
             return img
-        x = np.array(img.convert('L'), dtype=np.float32) / 255.0
+
+        # 1) to grayscale float32 in [0,1]
+        x = np.asarray(img.convert('L'), dtype=np.float32) / 255.0
+
+        # 2) multilevel 2D DWT
         coeffs = pywt.wavedec2(x, self.wavelet, level=self.level)
-        cA, cDs = coeffs[0], coeffs[1:]
+        cA, cDs = coeffs[0], coeffs[1:]      # cDs is list of (cH, cV, cD) tuples
 
-        # Estimate noise sigma from finest detail coeffs
-        cH, cV, cD = cDs[-1]
-        sigma = np.median(np.abs(cD)) / 0.6745 + 1e-8
+        # 3) estimate noise from finest scale diagonal details
+        cH_last, cV_last, cD_last = cDs[-1]
+        sigma = np.median(np.abs(cD_last)) / 0.6745 + 1e-8
 
-        # BayesShrink thresholds per subband
         new_cDs = []
         for (cH, cV, cD) in cDs:
-            for band in (cH, cV, cD):
-                var = np.mean(band**2)
-                t = (sigma**2 / max(np.sqrt(var), 1e-8))
-                band[:] = np.sign(band) * np.maximum(np.abs(band) - t, 0.0)
+            # BayesShrink threshold per subband
+            def shrink(band: np.ndarray) -> np.ndarray:
+                var = float(np.mean(band**2)) + 1e-12
+                t = (sigma**2) / max(np.sqrt(var), 1e-8)
+                # soft threshold
+                return np.sign(band) * np.maximum(np.abs(band) - t, 0.0)
+
+            cH = shrink(cH)
+            cV = shrink(cV)
+            cD = shrink(cD)
+
+            # IMPORTANT: keep as a 3-tuple of ndarrays (not list)
             new_cDs.append((cH, cV, cD))
 
+        # 4) inverse DWT (coeffs format: (cA, [ (cH1,cV1,cD1), ..., (cHn,cVn,cDn) ]))
         rec = pywt.waverec2((cA, new_cDs), self.wavelet)
+
+        # 5) back to uint8 RGB
         rec = np.clip(rec * 255.0, 0, 255).astype(np.uint8)
         return Image.fromarray(rec).convert('RGB')
 
