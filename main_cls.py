@@ -5,7 +5,6 @@ import os
 from torchvision import transforms
 import argparse
 from util import top_k_accuracy, CLAHE, FocalCE
-from augmodel import StructureMap, WaveletDenoise, UnsharpMask
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import models
