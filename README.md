@@ -45,3 +45,12 @@ python main_cls.py --exp_name=exp_yolov8_ep300_600x600_sceC --img_size=600 --epo
 ```bash
 python main_cls.py --exp_name=exp_yolov8_ep300_600x600_sceD --img_size=600 --epochs=600 --model_name=yolov8 --batch_size=16 --test_batch_size=16 --seed=42 --scenario=D --use_wavelet --wavelet_p 1.0 
 ```
+
+5. Scenario E (Unsharp-only)
+```bash
+python main_cls.py --exp_name=exp_yolov8_ep300_600x600_sceE --img_size=600 --epochs=600 --model_name=yolov8 --batch_size=16 --test_batch_size=16 --seed=42 --scenario=E --use_unsharp --unsharp_p 1.0 
+```
+6. Scenario F (Wavelet + Unsharp)
+```bash
+python main_cls.py --exp_name=exp_yolov8_ep300_600x600_sceF --img_size=600 --epochs=600 --model_name=yolov8 --batch_size=16 --test_batch_size=16 --seed=42 --scenario=F --use_wavelet --wavelet_p 1.0 --use_unsharp --unsharp_p 1.0
+```
