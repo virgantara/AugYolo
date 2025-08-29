@@ -28,10 +28,11 @@ class UnsharpMask:
             mask[np.abs(mask) < self.threshold] = 0
         sharp = cv2.addWeighted(arr, 1.0, mask, self.amount, 0)
         return Image.fromarray(sharp).convert('RGB')  # replicate to 3ch for ImageNet models
+
 class WaveletDenoise:
     """
     BayesShrink soft-thresholding in wavelet domain for grayscale images.
-    Ensures detail coefficients are passed back to waverec2 as 3-tuples.
+    Coerces coeff formats to tuples of ndarrays to satisfy pywt.waverec2.
     """
     def __init__(self, wavelet='db2', level=2, p=1.0):
         self.wavelet = wavelet
@@ -42,37 +43,42 @@ class WaveletDenoise:
         if np.random.rand() > self.p:
             return img
 
-        # 1) to grayscale float32 in [0,1]
+        # 1) grayscale float32 in [0,1]
         x = np.asarray(img.convert('L'), dtype=np.float32) / 255.0
 
-        # 2) multilevel 2D DWT
+        # 2) decompose
         coeffs = pywt.wavedec2(x, self.wavelet, level=self.level)
-        cA, cDs = coeffs[0], coeffs[1:]      # cDs is list of (cH, cV, cD) tuples
+        cA, cDs = coeffs[0], coeffs[1:]  # list of (cH, cV, cD)
 
-        # 3) estimate noise from finest scale diagonal details
+        # 3) noise estimate from finest diag band
         cH_last, cV_last, cD_last = cDs[-1]
         sigma = np.median(np.abs(cD_last)) / 0.6745 + 1e-8
 
-        new_cDs = []
-        for (cH, cV, cD) in cDs:
-            # BayesShrink threshold per subband
-            def shrink(band: np.ndarray) -> np.ndarray:
-                var = float(np.mean(band**2)) + 1e-12
-                t = (sigma**2) / max(np.sqrt(var), 1e-8)
-                # soft threshold
-                return np.sign(band) * np.maximum(np.abs(band) - t, 0.0)
+        def shrink(band: np.ndarray) -> np.ndarray:
+            band = np.asarray(band, dtype=np.float32)
+            var = float(np.mean(band ** 2)) + 1e-12
+            t = (sigma ** 2) / max(np.sqrt(var), 1e-8)
+            return np.sign(band) * np.maximum(np.abs(band) - t, 0.0)
 
+        new_cDs = []
+        for triple in cDs:
+            # Force tuple of 3 ndarrays
+            if isinstance(triple, (list, tuple)) and len(triple) == 3:
+                cH, cV, cD = (np.asarray(triple[0], dtype=np.float32),
+                              np.asarray(triple[1], dtype=np.float32),
+                              np.asarray(triple[2], dtype=np.float32))
+            else:
+                raise ValueError(f"Unexpected coeff triple type/len: {type(triple)} / {len(triple) if hasattr(triple,'__len__') else 'NA'}")
             cH = shrink(cH)
             cV = shrink(cV)
             cD = shrink(cD)
+            new_cDs.append((cH, cV, cD))  # <-- 3-TUPLE, not list
 
-            # IMPORTANT: keep as a 3-tuple of ndarrays (not list)
-            new_cDs.append((cH, cV, cD))
+        # 4) reconstruct (coerce cA to float32 ndarray too)
+        cA = np.asarray(cA, dtype=np.float32)
+        safe_coeffs = (cA, new_cDs)  # list of tuples is OK
 
-        # 4) inverse DWT (coeffs format: (cA, [ (cH1,cV1,cD1), ..., (cHn,cVn,cDn) ]))
-        rec = pywt.waverec2((cA, new_cDs), self.wavelet)
-
-        # 5) back to uint8 RGB
+        rec = pywt.waverec2(safe_coeffs, self.wavelet)
         rec = np.clip(rec * 255.0, 0, 255).astype(np.uint8)
         return Image.fromarray(rec).convert('RGB')
 
