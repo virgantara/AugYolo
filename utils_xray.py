@@ -28,11 +28,10 @@ class UnsharpMask:
             mask[np.abs(mask) < self.threshold] = 0
         sharp = cv2.addWeighted(arr, 1.0, mask, self.amount, 0)
         return Image.fromarray(sharp).convert('RGB')  # replicate to 3ch for ImageNet models
-
 class WaveletDenoise:
     """
     BayesShrink soft-thresholding in wavelet domain for grayscale images.
-    Coerces coeff formats to tuples of ndarrays to satisfy pywt.waverec2.
+    Hardening: coerce every detail coeff to 3-tuples of float32 ndarrays.
     """
     def __init__(self, wavelet='db2', level=2, p=1.0):
         self.wavelet = wavelet
@@ -46,9 +45,9 @@ class WaveletDenoise:
         # 1) grayscale float32 in [0,1]
         x = np.asarray(img.convert('L'), dtype=np.float32) / 255.0
 
-        # 2) decompose
+        # 2) multilevel DWT
         coeffs = pywt.wavedec2(x, self.wavelet, level=self.level)
-        cA, cDs = coeffs[0], coeffs[1:]  # list of (cH, cV, cD)
+        cA, cDs = coeffs[0], coeffs[1:]  # cDs: list of (cH, cV, cD)
 
         # 3) noise estimate from finest diag band
         cH_last, cV_last, cD_last = cDs[-1]
@@ -62,26 +61,39 @@ class WaveletDenoise:
 
         new_cDs = []
         for triple in cDs:
-            # Force tuple of 3 ndarrays
-            if isinstance(triple, (list, tuple)) and len(triple) == 3:
-                cH, cV, cD = (np.asarray(triple[0], dtype=np.float32),
-                              np.asarray(triple[1], dtype=np.float32),
-                              np.asarray(triple[2], dtype=np.float32))
-            else:
-                raise ValueError(f"Unexpected coeff triple type/len: {type(triple)} / {len(triple) if hasattr(triple,'__len__') else 'NA'}")
+            # Coerce triple itself to tuple
+            if isinstance(triple, list):
+                triple = tuple(triple)
+            if not (isinstance(triple, tuple) and len(triple) == 3):
+                raise ValueError(f"Unexpected coeff triple: type={type(triple)}, len={len(triple) if hasattr(triple,'__len__') else 'NA'}")
+
+            cH, cV, cD = triple
+
+            # Coerce bands to float32 ndarrays
+            cH = np.asarray(cH, dtype=np.float32)
+            cV = np.asarray(cV, dtype=np.float32)
+            cD = np.asarray(cD, dtype=np.float32)
+
+            # Shrink
             cH = shrink(cH)
             cV = shrink(cV)
             cD = shrink(cD)
-            new_cDs.append((cH, cV, cD))  # <-- 3-TUPLE, not list
 
-        # 4) reconstruct (coerce cA to float32 ndarray too)
+            # Append strictly as 3-TUPLE (never list)
+            new_cDs.append((cH, cV, cD))
+
+        # FINAL SANITY: ensure every entry is a tuple, not list
+        assert all(isinstance(t, tuple) and len(t) == 3 for t in new_cDs), \
+            f"Detail coeffs must be list of 3-tuples, got types: {[type(t) for t in new_cDs]}"
+
+        # 4) reconstruct
         cA = np.asarray(cA, dtype=np.float32)
-        safe_coeffs = (cA, new_cDs)  # list of tuples is OK
+        safe_coeffs = (cA, new_cDs)  # list of tuples is fine
 
         rec = pywt.waverec2(safe_coeffs, self.wavelet)
         rec = np.clip(rec * 255.0, 0, 255).astype(np.uint8)
         return Image.fromarray(rec).convert('RGB')
-
+        
 class StructureMap:
     """
     Produces a binary/float structure map using adaptive threshold + morphology,
