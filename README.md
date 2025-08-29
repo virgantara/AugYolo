@@ -28,3 +28,20 @@ python main_cls.py --epochs=300 --batch_size=32 --test_batch_size=32
 ```bash
 python main_cls.py --exp_name=exp_yolov8 --img_size=608 --epochs=300 --model_name=yolov8 --batch_size=16 --test_batch_size=16 --seed=42
 ```
+
+1. Scenario A (Baseline)
+```bash
+python main_cls.py --exp_name=exp_yolov8_ep300_600x600_sceA --img_size=600 --epochs=600 --model_name=yolov8 --batch_size=16 --test_batch_size=16 --seed=42 --scenario=A
+```
+2. Scenario B (CLAHE-only as Augmentation)
+```bash
+python main_cls.py --exp_name=exp_yolov8_ep300_600x600_sceB --img_size=600 --epochs=600 --model_name=yolov8 --batch_size=16 --test_batch_size=16 --seed=42 --scenario=B
+```
+3. Scenario C (CLAHE-only as preprocessing)
+```bash
+python main_cls.py --exp_name=exp_yolov8_ep300_600x600_sceC --img_size=600 --epochs=600 --model_name=yolov8 --batch_size=16 --test_batch_size=16 --seed=42 --scenario=C
+```
+4. Scenario D (Wavelet-only)
+```bash
+python main_cls.py --exp_name=exp_yolov8_ep300_600x600_sceD --img_size=600 --epochs=600 --model_name=yolov8 --batch_size=16 --test_batch_size=16 --seed=42 --scenario=D --use_wavelet --wavelet_p 1.0 
+```

@@ -5,6 +5,7 @@ import os
 from torchvision import transforms
 import argparse
 from util import top_k_accuracy, CLAHE, FocalCE
+from augmodel import StructureMap, WaveletDenoise, UnsharpMask
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import models
@@ -26,6 +27,7 @@ from sklearn.utils.class_weight import compute_class_weight
 from van import VAN, load_model_weights
 from timm.models.vision_transformer import _cfg
 from functools import partial
+from transforms_factory import build_transforms
 
 def main(args):
     set_seed(args)
@@ -39,72 +41,9 @@ def main(args):
     train_path = os.path.join(DATASET_DIR, 'train.xlsx')
     test_path = os.path.join(DATASET_DIR, 'val.xlsx')  
     IMG_DIR = os.path.join(DATASET_DIR, 'images')
-    to_rgb = transforms.Grayscale(num_output_channels=3)
-    if args.use_clahe == 'A':
-        train_transform = transforms.Compose([
-            transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
-            transforms.RandomHorizontalFlip(0.5),
-            transforms.RandomRotation(20),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],  # ImageNet stats
-                std=[0.229, 0.224, 0.225]
-            )
-        ])
+    
+    train_transform, test_transform = build_transforms(args)
 
-        test_transform = transforms.Compose([
-            transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],  # ImageNet stats
-                std=[0.229, 0.224, 0.225]
-            )
-        ])
-
-        
-    elif args.use_clahe == 'B':
-        train_transform = transforms.Compose([
-            CLAHE(clip_limit=2.0, tile_grid_size=(8,8), p=0.25) if args.use_clahe else transforms.Lambda(lambda x: x),
-            transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
-            transforms.RandomHorizontalFlip(0.5),
-            transforms.RandomRotation(20),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],  # ImageNet stats
-                std=[0.229, 0.224, 0.225]
-            )
-        ])
-
-        test_transform = transforms.Compose([
-            transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],  # ImageNet stats
-                std=[0.229, 0.224, 0.225]
-            )
-        ])
-    elif args.use_clahe == 'C':
-        preprocess = transforms.Compose([
-            CLAHE(clip_limit=2.0, tile_grid_size=(8,8), p=1.0),
-            transforms.Resize((args.img_size, args.img_size))
-        ])
-        train_transform = transforms.Compose([
-            preprocess,
-            transforms.RandomHorizontalFlip(p=0.5),
-            transforms.RandomRotation(10),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485,0.456,0.406],
-                                 std=[0.229,0.224,0.225])
-        ])
-        
-        test_transform = transforms.Compose([
-            preprocess,
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],  # ImageNet stats
-                std=[0.229, 0.224, 0.225]
-            )
-        ])
     train_dataset = BoneTumorDataset(
         split_xlsx_path=train_path,
         metadata_xlsx_path=metadata_xlsx_path,
@@ -391,7 +330,7 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', type=int, default=300, metavar='N',
                         help='number of episode to train')
     parser.add_argument('--use_sgd', action='store_true', default=False, help='Use SGD')
-    parser.add_argument('--use_clahe', default='A', choices=['A','B','C'],help='A=no clahe, B=clahe as weak aug, C=clahe as preprocessing')
+    parser.add_argument('--scenario', default='A', choices=['A','B','C','D'],help='A=no clahe, B=clahe as weak aug, C=clahe as preprocessing')
     parser.add_argument('--use_balanced_weight', action='store_true', default=False, help='Use Weight Balancing')
     parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
                         help='learning rate (default: 0.001, 0.1 if using sgd)')
@@ -409,6 +348,23 @@ if __name__ == "__main__":
                         help='evaluate the model')
     parser.add_argument('--project_name', type=str, default='BTXRD', metavar='N',
                         help='Name of the Project WANDB')
+    parser.add_argument('--use_clahe', action='store_true')
+
+    # Wavelet toggles
+    parser.add_argument('--use_wavelet', action='store_true')
+    parser.add_argument('--wavelet_name', type=str, default='db2')
+    parser.add_argument('--wavelet_level', type=int, default=2)
+    parser.add_argument('--wavelet_p', type=float, default=1.0)  # 1.0 => deterministic preprocessing
+
+    # Unsharp toggles
+    parser.add_argument('--use_unsharp', action='store_true')
+    parser.add_argument('--unsharp_amount', type=float, default=0.7)
+    parser.add_argument('--unsharp_radius', type=float, default=1.0)
+    parser.add_argument('--unsharp_threshold', type=int, default=2)
+    parser.add_argument('--unsharp_p', type=float, default=1.0)
+
+    # Structure map (optional)
+    parser.add_argument('--use_structuremap', action='store_true')
     args = parser.parse_args()
 
     _init_()

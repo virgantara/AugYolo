@@ -124,7 +124,7 @@ def main(args):
     test_path = os.path.join(DATASET_DIR, 'val.xlsx')  
     IMG_DIR = os.path.join(DATASET_DIR, 'images')
     
-    if args.use_clahe == 'A':
+    if args.scenario == 'A':
 
         test_transform = transforms.Compose([
             transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
@@ -136,7 +136,7 @@ def main(args):
         ])
 
         
-    elif args.use_clahe == 'B':
+    elif args.scenario == 'B':
 
         test_transform = transforms.Compose([
             transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
@@ -146,7 +146,7 @@ def main(args):
                 std=[0.229, 0.224, 0.225]
             )
         ])
-    elif args.use_clahe == 'C':
+    elif args.scenario == 'C':
         preprocess = transforms.Compose([
             CLAHE(clip_limit=2.0, tile_grid_size=(8,8), p=1.0),
             transforms.Resize((args.img_size, args.img_size))
@@ -337,7 +337,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='BTXRD Classification')
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
-    parser.add_argument('--use_clahe', default='A', choices=['A','B','C'],help='A=no clahe, B=clahe as weak aug, C=clahe as preprocessing')
+    parser.add_argument('--scenario', default='A', choices=['A','B','C','D'],help='A=no clahe, B=clahe as weak aug, C=clahe as preprocessing')
     parser.add_argument('--img_size', type=int, default=608, metavar='img_size',
                         help='Size of input image)')
     parser.add_argument('--model_path', type=str, default='checkpoints/exp/best_model.pth', metavar='N',
