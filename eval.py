@@ -36,7 +36,7 @@ import matplotlib.pyplot as plt
 from van import VAN, load_model_weights
 from timm.models.vision_transformer import _cfg
 from functools import partial
-
+from transforms_factory import build_transforms
 
 def compute_imbalanced_metrics(y_true_np, y_pred_np, probs_np, num_classes=3):
     # Per-class metrics
@@ -124,44 +124,8 @@ def main(args):
     test_path = os.path.join(DATASET_DIR, 'val.xlsx')  
     IMG_DIR = os.path.join(DATASET_DIR, 'images')
     
-    if args.scenario == 'A':
-
-        test_transform = transforms.Compose([
-            transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],  # ImageNet stats
-                std=[0.229, 0.224, 0.225]
-            )
-        ])
-
-        
-    elif args.scenario == 'B':
-
-        test_transform = transforms.Compose([
-            transforms.Resize((args.img_size, args.img_size)),  # or (384, 384)
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],  # ImageNet stats
-                std=[0.229, 0.224, 0.225]
-            )
-        ])
-    elif args.scenario == 'C':
-        preprocess = transforms.Compose([
-            CLAHE(clip_limit=2.0, tile_grid_size=(8,8), p=1.0),
-            transforms.Resize((args.img_size, args.img_size))
-        ])
-
-        test_transform = transforms.Compose([
-            preprocess,
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],  # ImageNet stats
-                std=[0.229, 0.224, 0.225]
-            )
-        ])
+    _, test_transform = build_transforms(args)
     
-
     test_dataset = BoneTumorDataset(
         split_xlsx_path=test_path,
         metadata_xlsx_path=metadata_xlsx_path,
