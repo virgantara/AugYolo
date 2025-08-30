@@ -301,7 +301,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='BTXRD Classification')
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
-    parser.add_argument('--scenario', default='A', choices=['A','B','C','D'],help='A=no clahe, B=clahe as weak aug, C=clahe as preprocessing')
+    parser.add_argument('--scenario', default='A', type=str,help='A=no clahe, B=clahe as weak aug, C=clahe as preprocessing')
+    
     parser.add_argument('--img_size', type=int, default=608, metavar='img_size',
                         help='Size of input image)')
     parser.add_argument('--model_path', type=str, default='checkpoints/exp/best_model.pth', metavar='N',
@@ -336,7 +337,7 @@ if __name__ == "__main__":
 
     # Structure map (optional)
     parser.add_argument('--use_structuremap', action='store_true')
-    
+
     args = parser.parse_args()
 
     main(args)
