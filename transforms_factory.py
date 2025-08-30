@@ -16,6 +16,7 @@ def build_transforms(args):
       B: CLAHE as augmentation (optional, via args.use_clahe)
       C: CLAHE as preprocessing (always if scenario C)
       D: Research stack (Wavelet/Unsharp/StructureMap) – but now toggleable
+      G: CLAHE as augmentation + Wavelet + Unsharp (preprocessing)
 
     Toggles (work in ANY scenario):
       --use_wavelet, --use_unsharp (apply as PREPROCESSING before resize)
@@ -33,6 +34,11 @@ def build_transforms(args):
     if args.scenario == 'C':
         pre_list.append(CLAHE(clip_limit=2.0, tile_grid_size=(8, 8), p=1.0))
 
+
+    if args.scenario == 'G':
+        args.use_wavelet = True
+        args.use_unsharp = True
+        
     # Optional wavelet & unsharp (can be used in ANY scenario)
     pre_list.append(_maybe(
         WaveletDenoise(wavelet=getattr(args, 'wavelet_name', 'db2'),
@@ -60,8 +66,11 @@ def build_transforms(args):
     ]
 
     # Scenario B: optional CLAHE as augmentation (weak + rare recommended)
-    if args.scenario == 'B' and getattr(args, 'use_clahe', True):
-        aug_list.insert(0, CLAHE(clip_limit=2.0, tile_grid_size=(8, 8), p=0.25))
+    if args.scenario in ['B', 'G'] and getattr(args, 'use_clahe', True):
+        aug_list.insert(0, CLAHE(
+            clip_limit=2.0, tile_grid_size=(8, 8),
+            p=getattr(args, 'clahe_p', 0.25)
+        ))
 
     # Optional structure map (kept off by default; turn on to test)
     if getattr(args, 'use_structuremap', False):
