@@ -320,6 +320,23 @@ if __name__ == "__main__":
     parser.add_argument('--num_worker', type=int, default=4, metavar='S',
                         help='Num of Worker')
     parser.add_argument('--use_balanced_weight', action='store_true', default=False, help='Use Weight Balancing')
+
+    # Wavelet toggles
+    parser.add_argument('--use_wavelet', action='store_true')
+    parser.add_argument('--wavelet_name', type=str, default='db2')
+    parser.add_argument('--wavelet_level', type=int, default=2)
+    parser.add_argument('--wavelet_p', type=float, default=1.0)  # 1.0 => deterministic preprocessing
+
+    # Unsharp toggles
+    parser.add_argument('--use_unsharp', action='store_true')
+    parser.add_argument('--unsharp_amount', type=float, default=0.7)
+    parser.add_argument('--unsharp_radius', type=float, default=1.0)
+    parser.add_argument('--unsharp_threshold', type=int, default=2)
+    parser.add_argument('--unsharp_p', type=float, default=1.0)
+
+    # Structure map (optional)
+    parser.add_argument('--use_structuremap', action='store_true')
+    
     args = parser.parse_args()
 
     main(args)
