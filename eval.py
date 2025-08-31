@@ -322,6 +322,10 @@ if __name__ == "__main__":
                         help='Num of Worker')
     parser.add_argument('--use_balanced_weight', action='store_true', default=False, help='Use Weight Balancing')
 
+    parser.add_argument('--use_clahe', action='store_true')
+
+    parser.add_argument('--clahe_p', type=float, default=0.25)
+
     # Wavelet toggles
     parser.add_argument('--use_wavelet', action='store_true')
     parser.add_argument('--wavelet_name', type=str, default='db2')
