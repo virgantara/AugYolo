@@ -144,7 +144,9 @@ def main(args):
             train_loss = train_one_epoch(model, train_loader, optimizer, criterion, device)
             val_loss, top1_acc, top5_acc = validate(model, test_loader, criterion, device)
             scheduler.step()
-
+            
+            print(f"Train Loss: {train_loss:.4f}")
+            print(f"Val Loss: {val_loss:.4f} | Top-1 Acc: {top1_acc:.4f} | Top-5 Acc: {top5_acc:.4f}")
             wandb.log({
                 "epoch": epoch + 1,
                 "train_loss": train_loss,
