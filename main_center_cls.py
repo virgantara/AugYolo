@@ -160,6 +160,7 @@ def main(args):
                 save_dir = os.path.join("checkpoints", args.exp_name, f"seed{seed}")
                 os.makedirs(save_dir, exist_ok=True)
                 torch.save(best_state, os.path.join(save_dir, "best_model.pth"))
+                print(f"Best model saved at Seed: {seed}, epoch: {epoch+1} with Top-1 Acc: {top1_acc:.4f}")
 
         wandb.summary["best_top1_accuracy"] = float(best_top1)
         per_seed_best_top1.append(float(best_top1))
