@@ -821,7 +821,7 @@ def HiFuse_Base(num_classes: int):
 
 
 if __name__ == '__main__':
-    img_size = 600
+    img_size = 400
     data = torch.rand(2,3,img_size,img_size)
     
     model = HiFuse_Small(num_classes=3)
