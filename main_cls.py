@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import random_split, DataLoader
-from dataset import BoneTumorDataset
+from dataset import BoneTumorDataset, BoneTumorDatasetCenter
 import os
 from torchvision import transforms
 import argparse
@@ -43,18 +43,41 @@ def main(args):
     
     train_transform, test_transform = build_transforms(args)
 
-    train_dataset = BoneTumorDataset(
-        split_xlsx_path=train_path,
-        metadata_xlsx_path=metadata_xlsx_path,
-        image_dir=IMG_DIR,  # make sure this exists
-        transform=train_transform
-    )
+    # train_dataset = BoneTumorDataset(
+    #     split_xlsx_path=train_path,
+    #     metadata_xlsx_path=metadata_xlsx_path,
+    #     image_dir=IMG_DIR,  # make sure this exists
+    #     transform=train_transform
+    # )
 
-    test_dataset = BoneTumorDataset(
-        split_xlsx_path=test_path,
+    # test_dataset = BoneTumorDataset(
+    #     split_xlsx_path=test_path,
+    #     metadata_xlsx_path=metadata_xlsx_path,
+    #     image_dir=IMG_DIR,
+    #     transform=test_transform
+    # )
+
+    train_dataset_c1 = BoneTumorDatasetCenter(
         metadata_xlsx_path=metadata_xlsx_path,
         image_dir=IMG_DIR,
-        transform=test_transform
+        center_id=1,   # Center 1
+        transform=train_transform
+    )
+    train_dataset_c2 = BoneTumorDatasetCenter(
+        metadata_xlsx_path=metadata_xlsx_path,
+        image_dir=IMG_DIR,
+        center_id=2,   # Center 2
+        transform=train_transform
+    )
+    
+    train_dataset = ConcatDataset([train_dataset_c1, train_dataset_c2])
+
+    # Test dataset = Center 3
+    test_dataset = BoneTumorDatasetCenter(
+        metadata_xlsx_path=metadata_xlsx_path,
+        image_dir=IMG_DIR,
+        center_id=3,   # Center 3
+        transform=test_transform   # use test transform
     )
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
