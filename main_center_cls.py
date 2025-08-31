@@ -105,7 +105,7 @@ def main(args):
         model = get_model(args).to(device)
 
         # (Paper policy) freeze backbone, finetune head ONLY — for your YOLOv8Cls model
-        freeze_all_but_head(model)
+        # freeze_all_but_head(model)
 
         optimizer = torch.optim.AdamW(
             [p for p in model.parameters() if p.requires_grad],
