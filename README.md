@@ -20,16 +20,16 @@ conda activate btxrd-env
 
 # Training Classification
 
-## Train Center 1
+## Train T-Test (Center 1 and 2 as training, Center 3 as testing)
 ```bash
 python main_center_cls.py \
-  --exp_name=exp_yolov8_ep300_600x600_sceG_c1 \
+  --exp_name=exp_yolov8_ep300_600x600_sceG_ttest \
   --img_size=600 \
   --epochs=300 \
   --model_name=yolov8 \
   --batch_size=16 \
   --test_batch_size=16 \
-  --seed=42 \
+  --seeds 42 43 44 45 46 \
   --scenario=G \
   --center_id=1 \
   --use_clahe --clahe_p=0.25 \
