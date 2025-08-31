@@ -23,8 +23,8 @@ conda activate btxrd-env
 ## Train Center 1
 ```bash
 python main_center_cls.py \
-  --exp_name=exp_yolov8_ep300_640x640_sceG \
-  --img_size=640 \
+  --exp_name=exp_yolov8_ep300_600x600_sceG_c1 \
+  --img_size=600 \
   --epochs=300 \
   --model_name=yolov8 \
   --batch_size=16 \
