@@ -4,8 +4,8 @@ from torch import nn
 import torch.nn.functional as F
 
 
-from timm.models.layers import DropPath, to_2tuple, trunc_normal_
-from . import layers as L
+from timm.layers import DropPath, to_2tuple, trunc_normal_
+import layers as L
 
 def conv3x3(in_planes, out_planes, stride=1):
 
@@ -452,3 +452,11 @@ class MODEL(nn.Module):
         return out
 
 
+if __name__ == '__main__':
+    img_size = 600
+    data = torch.rand(2,3,img_size,img_size)
+    
+    model = MODEL(img_size=img_size,in_channel=3, output_channel=3)
+    
+    output = model(data)
+    print(output.size())
