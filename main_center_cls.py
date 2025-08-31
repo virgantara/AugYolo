@@ -36,6 +36,7 @@ def main(args):
 
     num_epochs = args.epochs
 
+    center_id = args.center_id
     
     DATASET_DIR = 'data/BTXRD'
     metadata_xlsx_path = os.path.join(DATASET_DIR, 'dataset.xlsx')
