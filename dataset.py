@@ -171,3 +171,41 @@ class BoneTumorDataset(Dataset):
             image = ToTensor()(image)  # ensure tensor even if no transform
 
         return image, row['label']
+
+
+class BoneTumorDatasetCenter(Dataset):
+    def __init__(self, metadata_xlsx_path, image_dir, center_id, transform=None):
+        """
+        split_xlsx_path: path to train.xlsx or val.xlsx
+        metadata_xlsx_path: path to dataset.xlsx (contains tumor/benign/malignant)
+        image_dir: path to images folder
+        """
+        # Load image list
+        meta_df = pd.read_excel(metadata_xlsx_path)
+
+        # Merge on image_id
+        self.df = meta_df[meta_df["center"] == center_id].copy() 
+
+        # Generate labels
+        self.df['label'] = self.df.apply(encode_label, axis=1)
+
+        # Drop invalid labels
+        self.df = self.df[self.df['label'] != -1].reset_index(drop=True)
+
+        self.image_dir = image_dir
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, idx):
+        row = self.df.iloc[idx]
+        img_path = os.path.join(self.image_dir, row['image_id'])
+        image = Image.open(img_path).convert('RGB')
+
+        if self.transform:
+            image = self.transform(image)
+        else:
+            image = ToTensor()(image)  # ensure tensor even if no transform
+
+        return image, row['label']
