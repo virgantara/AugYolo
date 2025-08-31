@@ -90,7 +90,7 @@ def main(args):
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    y_labels = train_dataset.df['label'].tolist()
+    # y_labels = train_dataset.df['label'].tolist()
 
     
 
@@ -199,17 +199,17 @@ def main(args):
 
     wandb.watch(model)
 
-    if args.use_balanced_weight:
-        class_weights = compute_class_weight(
-            class_weight='balanced',
-            classes=[0, 1, 2],
-            y=y_labels  # or collect all labels manually
-        )
-        class_weights = torch.tensor(class_weights, dtype=torch.float).to(device)
+    # if args.use_balanced_weight:
+    #     class_weights = compute_class_weight(
+    #         class_weight='balanced',
+    #         classes=[0, 1, 2],
+    #         y=y_labels  # or collect all labels manually
+    #     )
+    #     class_weights = torch.tensor(class_weights, dtype=torch.float).to(device)
 
-        criterion = nn.CrossEntropyLoss(label_smoothing=0.1, weight=class_weights)
-    else:
-        criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+    #     criterion = nn.CrossEntropyLoss(label_smoothing=0.1, weight=class_weights)
+    # else:
+    #     criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
         
     criterion = FocalCE(weight=class_weights if args.use_balanced_weight else None, gamma=2.0)
 
