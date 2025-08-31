@@ -176,20 +176,33 @@ class main_model(nn.Module):
         ######  Global Branch ######
         x_s, H, W = self.patch_embed(imgs)
         x_s = self.pos_drop(x_s)
-        x_s_1, H, W = self.layers1(x_s, H, W)
-        x_s_2, H, W = self.layers2(x_s_1, H, W)
-        x_s_3, H, W = self.layers3(x_s_2, H, W)
-        x_s_4, H, W = self.layers4(x_s_3, H, W)
+        x_s_1, H1, W1 = self.layers1(x_s, H, W)   # no downsample
+        x_s_2, H2, W2 = self.layers2(x_s_1, H1, W1)
+        x_s_3, H3, W3 = self.layers3(x_s_2, H2, W2)
+        x_s_4, H4, W4 = self.layers4(x_s_3, H3, W3)
 
-        # [B,L,C] ---> [B,C,H,W]
-        x_s_1 = torch.transpose(x_s_1, 1, 2)
-        x_s_1 = x_s_1.view(x_s_1.shape[0], -1, 56, 56)
-        x_s_2 = torch.transpose(x_s_2, 1, 2)
-        x_s_2 = x_s_2.view(x_s_2.shape[0], -1, 28, 28)
-        x_s_3 = torch.transpose(x_s_3, 1, 2)
-        x_s_3 = x_s_3.view(x_s_3.shape[0], -1, 14, 14)
-        x_s_4 = torch.transpose(x_s_4, 1, 2)
-        x_s_4 = x_s_4.view(x_s_4.shape[0], -1, 7, 7)
+        # helper to reshape BLC -> BCHW using dynamic H,W
+        def blc_to_bchw(x, Hh, Ww):
+            # x: [B, L, C] where L == Hh*Ww
+            B, L, C = x.shape
+            assert L == Hh * Ww, f"Token length {L} != H*W ({Hh}*{Ww})"
+            return x.transpose(1, 2).contiguous().view(B, C, Hh, Ww)
+
+        # [B,L,C] ---> [B,C,H,W] using dynamic sizes
+        x_s_1 = blc_to_bchw(x_s_1, H1, W1)
+        x_s_2 = blc_to_bchw(x_s_2, H2, W2)
+        x_s_3 = blc_to_bchw(x_s_3, H3, W3)
+        x_s_4 = blc_to_bchw(x_s_4, H4, W4)
+
+        # # [B,L,C] ---> [B,C,H,W]
+        # x_s_1 = torch.transpose(x_s_1, 1, 2)
+        # x_s_1 = x_s_1.view(x_s_1.shape[0], -1, 56, 56)
+        # x_s_2 = torch.transpose(x_s_2, 1, 2)
+        # x_s_2 = x_s_2.view(x_s_2.shape[0], -1, 28, 28)
+        # x_s_3 = torch.transpose(x_s_3, 1, 2)
+        # x_s_3 = x_s_3.view(x_s_3.shape[0], -1, 14, 14)
+        # x_s_4 = torch.transpose(x_s_4, 1, 2)
+        # x_s_4 = x_s_4.view(x_s_4.shape[0], -1, 7, 7)
 
         ######  Local Branch ######
         x_c = self.downsample_layers[0](imgs)
@@ -298,20 +311,37 @@ class HFF_block(nn.Module):
         self.residual = IRMLP(ch_1 + ch_2 + ch_int, ch_out)
         self.drop_path = DropPath(drop_rate) if drop_rate > 0. else nn.Identity()
 
+    def _resize_to(self, x, target_hw):
+        th, tw = target_hw
+        if x.shape[-2] == th and x.shape[-1] == tw:
+            return x
+        # bilinear is fine for feature maps; preserves channels
+        return F.interpolate(x, size=(th, tw), mode='bilinear', align_corners=False)
+
     def forward(self, l, g, f):
 
         W_local = self.W_l(l)   # local feature from Local Feature Block
         W_global = self.W_g(g)   # global feature from Global Feature Block
+
+        # choose target spatial size from local branch
+        tgt_hw = (W_local.shape[-2], W_local.shape[-1])
+
         if f is not None:
             W_f = self.Updim(f)
             W_f = self.Avg(W_f)
+            W_f = self._resize_to(W_f, tgt_hw)
             shortcut = W_f
+
+            # ensure global matches local before concat
+            W_global = self._resize_to(W_global, tgt_hw)
+
             X_f = torch.cat([W_f, W_local, W_global], 1)
             X_f = self.norm1(X_f)
             X_f = self.W3(X_f)
             X_f = self.gelu(X_f)
         else:
             shortcut = 0
+            W_global = self._resize_to(W_global, tgt_hw)
             X_f = torch.cat([W_local, W_global], 1)
             X_f = self.norm2(X_f)
             X_f = self.W(X_f)
@@ -319,21 +349,21 @@ class HFF_block(nn.Module):
 
         # spatial attention for ConvNeXt branch
         l_jump = l
-        max_result, _ = torch.max(l, dim=1, keepdim=True)
-        avg_result = torch.mean(l, dim=1, keepdim=True)
-        result = torch.cat([max_result, avg_result], 1)
-        l = self.spatial(result)
-        l = self.sigmoid(l) * l_jump
+        max_l, _ = torch.max(l, dim=1, keepdim=True)
+        avg_l   = torch.mean(l, dim=1, keepdim=True)
+        l_att   = self.spatial(torch.cat([max_l, avg_l], 1))
+        l_att   = self.sigmoid(l_att) * l_jump
+        l_att   = self._resize_to(l_att, tgt_hw)          # <<< align
 
         # channel attetion for transformer branch
-        g_jump = g
-        max_result=self.maxpool(g)
-        avg_result=self.avgpool(g)
-        max_out=self.se(max_result)
-        avg_out=self.se(avg_result)
-        g = self.sigmoid(max_out+avg_out) * g_jump
+        g_jump  = g
+        max_g   = self.maxpool(g)
+        avg_g   = self.avgpool(g)
+        g_att   = self.sigmoid(self.se(max_g) + self.se(avg_g)) * g_jump
+        g_att   = self._resize_to(g_att, tgt_hw)          # <<< align
 
-        fuse = torch.cat([g, l, X_f], 1)
+        # final fuse at consistent H×W
+        fuse = torch.cat([g_att, l_att, X_f], 1)          # channels: ch_2 + ch_1 + ch_int
         fuse = self.norm3(fuse)
         fuse = self.residual(fuse)
         fuse = shortcut + self.drop_path(fuse)
@@ -788,3 +818,13 @@ def HiFuse_Base(num_classes: int):
                      conv_depths=(2, 2, 18, 2),
                      num_classes=num_classes)
     return model
+
+
+if __name__ == '__main__':
+    img_size = 600
+    data = torch.rand(2,3,img_size,img_size)
+    
+    model = HiFuse_Small(num_classes=3)
+    
+    output = model(data)
+    print(output.size())
