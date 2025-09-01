@@ -263,9 +263,9 @@ def main(args):
 
             best_epoch = epoch + 1
             epochs_since_improve = 0
-        else:
-            epochs_since_improve += 1
-            print(f"No improvement for {epochs_since_improve}/{patience} evals.")
+        # else:
+        #     epochs_since_improve += 1
+        #     print(f"No improvement for {epochs_since_improve}/{patience} evals.")
 
         wandb_log = {
             "epoch": epoch + 1,
