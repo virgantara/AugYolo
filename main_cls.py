@@ -273,8 +273,8 @@ def main(args):
             "val_loss": val_loss,
             "top1_accuracy": top1_acc,
             "top5_accuracy": top5_acc,
-            "epochs_since_improve": epochs_since_improve,
-            "best_top1_accuracy_so_far": best_top1_acc
+            # "epochs_since_improve": epochs_since_improve,
+            # "best_top1_accuracy_so_far": best_top1_acc
         }
         wandb.log(wandb_log)
 
