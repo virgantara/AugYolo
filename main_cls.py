@@ -20,6 +20,7 @@ from models import (
 )
 
 from models_yolo import (ClassificationModel)
+from model_zoo.medvit.MedViT import MedVit
 import random
 import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
@@ -190,6 +191,13 @@ def main(args):
                 m.p = args.dropout  # set dropout
         # for p in model.parameters():
         #     p.requires_grad = True  # for training
+    elif args.model_name == 'medvit':
+        model = MedViT(
+            num_classes=3,
+            stem_chs=[64, 32, 64], 
+            depths=[3, 4, 10, 3], 
+            path_dropout=0.1
+        )
     else:
         model = model_map[args.model_name]()
         

@@ -17,6 +17,8 @@ from models import (
     EfficientNetB4BTXRD,
     ResNet50
 )
+
+from model_zoo.medvit.MedViT import MedVit
 import random
 import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
@@ -176,6 +178,14 @@ def main(args):
     elif args.model_name == 'yolov8':
         cfg = os.path.join('yolo/cfg','models','v8',f'yolov8{args.yolo_scale}-cls.yaml')
         model = ClassificationModel(cfg, nc=3, ch=3)
+        model.load_state_dict(torch.load(args.model_path, weights_only=True))
+    elif args.model_name == 'medvit':
+        model = MedViT(
+            num_classes=3,
+            stem_chs=[64, 32, 64], 
+            depths=[3, 4, 10, 3], 
+            path_dropout=0.1
+        )
         model.load_state_dict(torch.load(args.model_path, weights_only=True))
     else:
         model = model_map[args.model_name]()
