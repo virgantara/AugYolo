@@ -49,7 +49,7 @@ def main(args):
     
     train_transform, test_transform = build_transforms(args)
 
-    if use_center_dataset_split:
+    if args.use_center_dataset_split:
         train_dataset_c1 = BoneTumorDatasetCenter(
             metadata_xlsx_path=metadata_xlsx_path,
             image_dir=IMG_DIR,
