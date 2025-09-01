@@ -3,6 +3,6 @@ data/BTXRD
 *.jpeg
 
 
-
+checkpoints/**
 __pycache__
 __pycache__/**
