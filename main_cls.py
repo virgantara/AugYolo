@@ -278,10 +278,10 @@ def main(args):
         }
         wandb.log(wandb_log)
 
-        if epochs_since_improve >= patience:
-            print(f"\nEarly stopping at epoch {epoch+1}. "
-                  f"Best Top-1 Acc: {best_top1_acc:.4f} (epoch {best_epoch}).")
-            break
+        # if epochs_since_improve >= patience:
+        #     print(f"\nEarly stopping at epoch {epoch+1}. "
+        #           f"Best Top-1 Acc: {best_top1_acc:.4f} (epoch {best_epoch}).")
+        #     break
     wandb.finish()
 
 
