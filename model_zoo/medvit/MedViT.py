@@ -12,7 +12,15 @@ from einops import rearrange
 from timm.layers import DropPath, trunc_normal_
 from timm.models import register_model
 from torch import nn
-from utils import merge_pre_bn
+try:
+    from model_zoo.medvit.utils import merge_pre_bn
+except ModuleNotFoundError:
+    # Allow running this file directly: python model_zoo/medvit/MedViT.py
+    import os, sys
+    PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    if PROJECT_ROOT not in sys.path:
+        sys.path.insert(0, PROJECT_ROOT)
+    from model_zoo.medvit.utils import merge_pre_bn
 
 NORM_EPS = 1e-5
 

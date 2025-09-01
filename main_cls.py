@@ -19,6 +19,9 @@ from models import (
     ResNet50
 )
 
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+
 from models_yolo import (ClassificationModel)
 from model_zoo.medvit.MedViT import MedVit
 import random
