@@ -45,42 +45,43 @@ def main(args):
     
     train_transform, test_transform = build_transforms(args)
 
-    # train_dataset = BoneTumorDataset(
-    #     split_xlsx_path=train_path,
-    #     metadata_xlsx_path=metadata_xlsx_path,
-    #     image_dir=IMG_DIR,  # make sure this exists
-    #     transform=train_transform
-    # )
+    if use_center_dataset_split:
+        train_dataset_c1 = BoneTumorDatasetCenter(
+            metadata_xlsx_path=metadata_xlsx_path,
+            image_dir=IMG_DIR,
+            center_id=1,   # Center 1
+            transform=train_transform
+        )
+        train_dataset_c2 = BoneTumorDatasetCenter(
+            metadata_xlsx_path=metadata_xlsx_path,
+            image_dir=IMG_DIR,
+            center_id=2,   # Center 2
+            transform=train_transform
+        )
+        
+        train_dataset = ConcatDataset([train_dataset_c1, train_dataset_c2])
 
-    # test_dataset = BoneTumorDataset(
-    #     split_xlsx_path=test_path,
-    #     metadata_xlsx_path=metadata_xlsx_path,
-    #     image_dir=IMG_DIR,
-    #     transform=test_transform
-    # )
+        # Test dataset = Center 3
+        test_dataset = BoneTumorDatasetCenter(
+            metadata_xlsx_path=metadata_xlsx_path,
+            image_dir=IMG_DIR,
+            center_id=3,   # Center 3
+            transform=test_transform   # use test transform
+        )
+    else:
+        train_dataset = BoneTumorDataset(
+            split_xlsx_path=train_path,
+            metadata_xlsx_path=metadata_xlsx_path,
+            image_dir=IMG_DIR,  # make sure this exists
+            transform=train_transform
+        )
 
-    train_dataset_c1 = BoneTumorDatasetCenter(
-        metadata_xlsx_path=metadata_xlsx_path,
-        image_dir=IMG_DIR,
-        center_id=1,   # Center 1
-        transform=train_transform
-    )
-    train_dataset_c2 = BoneTumorDatasetCenter(
-        metadata_xlsx_path=metadata_xlsx_path,
-        image_dir=IMG_DIR,
-        center_id=2,   # Center 2
-        transform=train_transform
-    )
-    
-    train_dataset = ConcatDataset([train_dataset_c1, train_dataset_c2])
-
-    # Test dataset = Center 3
-    test_dataset = BoneTumorDatasetCenter(
-        metadata_xlsx_path=metadata_xlsx_path,
-        image_dir=IMG_DIR,
-        center_id=3,   # Center 3
-        transform=test_transform   # use test transform
-    )
+        test_dataset = BoneTumorDataset(
+            split_xlsx_path=test_path,
+            metadata_xlsx_path=metadata_xlsx_path,
+            image_dir=IMG_DIR,
+            transform=test_transform
+        )
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
                           num_workers=args.num_worker, pin_memory=True)
@@ -388,6 +389,8 @@ if __name__ == "__main__":
     parser.add_argument('--unsharp_radius', type=float, default=1.0)
     parser.add_argument('--unsharp_threshold', type=int, default=2)
     parser.add_argument('--unsharp_p', type=float, default=1.0)
+
+    parser.add_argument('--use_center_dataset_split', action='store_true', default=False, help='Use Center 1,2 as train, 3 as test')
 
     # Structure map (optional)
     parser.add_argument('--use_structuremap', action='store_true')
