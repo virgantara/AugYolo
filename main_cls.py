@@ -238,6 +238,10 @@ def main(args):
 
     best_top1_acc = 0.0
     best_model_state = None
+
+    patience = args.early_stop_patience
+    epochs_since_improve = 0
+    best_epoch = -1
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch+1}/{num_epochs}")
 
@@ -247,22 +251,37 @@ def main(args):
         print(f"Train Loss: {train_loss:.4f}")
         print(f"Val Loss: {val_loss:.4f} | Top-1 Acc: {top1_acc:.4f} | Top-5 Acc: {top5_acc:.4f}")
 
-        wandb_log = {
-            "epoch": epoch + 1,
-            "train_loss": train_loss,
-            "val_loss": val_loss,
-            "top1_accuracy": top1_acc,
-            "top5_accuracy": top5_acc,
-        }
-        wandb.log(wandb_log)
+        
+        improved = top1_acc > best_top1_acc
 
-        if top1_acc > best_top1_acc:
+        if improved:
             best_top1_acc = top1_acc
             best_model_state = model.state_dict()
             save_dir = os.path.join("checkpoints",args.exp_name)
             torch.save(best_model_state, os.path.join(save_dir, 'best_model.pth'))
             print(f"Best model saved at epoch {epoch+1} with Top-1 Acc: {top1_acc:.4f}")
 
+            best_epoch = epoch + 1
+            epochs_since_improve = 0
+        else:
+            epochs_since_improve += 1
+            print(f"No improvement for {epochs_since_improve}/{patience} evals.")
+
+        wandb_log = {
+            "epoch": epoch + 1,
+            "train_loss": train_loss,
+            "val_loss": val_loss,
+            "top1_accuracy": top1_acc,
+            "top5_accuracy": top5_acc,
+            "epochs_since_improve": epochs_since_improve,
+            "best_top1_accuracy_so_far": best_top1_acc
+        }
+        wandb.log(wandb_log)
+
+        if epochs_since_improve >= patience:
+            print(f"\nEarly stopping at epoch {epoch+1}. "
+                  f"Best Top-1 Acc: {best_top1_acc:.4f} (epoch {best_epoch}).")
+            break
     wandb.finish()
 
 
@@ -384,6 +403,9 @@ if __name__ == "__main__":
                         help='evaluate the model')
     parser.add_argument('--project_name', type=str, default='BTXRD', metavar='N',
                         help='Name of the Project WANDB')
+    parser.add_argument('--early_stop_patience', type=int, default=10,
+                    help='Stop if no Top-1 improvement for this many evals')
+
     parser.add_argument('--use_clahe', action='store_true')
 
     parser.add_argument('--clahe_p', type=float, default=0.25)
