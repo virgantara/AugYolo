@@ -23,7 +23,7 @@ import sys, os
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from models_yolo import (ClassificationModel)
-from model_zoo.medvit.MedViT import MedVit
+from model_zoo.medvit.MedViT import MedViT
 import random
 import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
