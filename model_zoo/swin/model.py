@@ -619,6 +619,8 @@ if __name__ == '__main__':
     data = torch.rand(2,3,img_size,img_size)
     
     model = SwinTransformer(img_size=img_size, num_classes=3,patch_size=5, window_size=5)
-    
+    print(f"Total parameters: {sum(p.numel() for p in model.parameters()) / 1e6:.2f}M")
+    print(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M")
+
     output = model(data)
     print(output.size())

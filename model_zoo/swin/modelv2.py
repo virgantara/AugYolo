@@ -631,3 +631,14 @@ class SwinTransformerV2(nn.Module):
         flops += self.num_features * self.patches_resolution[0] * self.patches_resolution[1] // (2 ** self.num_layers)
         flops += self.num_features * self.num_classes
         return flops
+
+if __name__ == '__main__':
+    img_size = 600
+    data = torch.rand(2,3,img_size,img_size)
+    
+    model = SwinTransformerV2(img_size=img_size, num_classes=3,patch_size=5, window_size=5)
+    print(f"Total parameters: {sum(p.numel() for p in model.parameters()) / 1e6:.2f}M")
+    print(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M")
+
+    output = model(data)
+    print(output.size())
