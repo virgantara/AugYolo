@@ -121,7 +121,7 @@ def main(args):
         #     num_classes=3,
         #     pretrained=args.pretrain_path
         # ),
-        'swin': lambda: SwinTransformer(img_size=args.img_size, num_classes=3),
+        'swin': lambda: SwinTransformer(img_size=args.img_size, num_classes=3, patch_size=args.patch_size, window_size=args.window_size),
         'convnext': lambda: ConvNeXtBTXRD(num_classes=3),
         'efficientnetb0': lambda: EfficientNetBTXRD(num_classes=3, dropout_p=args.dropout),
         'efficientnetb4': lambda: EfficientNetB4BTXRD(num_classes=3, dropout_p=args.dropout),
@@ -386,6 +386,8 @@ if __name__ == "__main__":
                         help='Size of batch)')
     parser.add_argument('--epochs', type=int, default=300, metavar='N',
                         help='number of episode to train')
+    parser.add_argument('--patch_size', type=int, default=4,help='Patch Size for Swin')
+    parser.add_argument('--window_size', type=int, default=7,help='Window Size for Swin')
     parser.add_argument('--use_sgd', action='store_true', default=False, help='Use SGD')
     parser.add_argument('--scenario', default='A', type=str,help='A=no clahe, B=clahe as weak aug, C=clahe as preprocessing')
     parser.add_argument('--use_balanced_weight', action='store_true', default=False, help='Use Weight Balancing')
