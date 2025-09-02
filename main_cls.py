@@ -121,7 +121,7 @@ def main(args):
         #     num_classes=3,
         #     pretrained=args.pretrain_path
         # ),
-        'swin': lambda: SwinTransformer(img_size=args.img_size, num_classes=3),
+        'swin': lambda: SwinTransformer(img_size=args.img_size, num_classes=3,patch_size=5, window_size=5),
         'convnext': lambda: ConvNeXtBTXRD(num_classes=3),
         'efficientnetb0': lambda: EfficientNetBTXRD(num_classes=3, dropout_p=args.dropout),
         'efficientnetb4': lambda: EfficientNetB4BTXRD(num_classes=3, dropout_p=args.dropout),
