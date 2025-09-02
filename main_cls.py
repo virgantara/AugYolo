@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from models_yolo import (ClassificationModel)
 from model_zoo.medvit.MedViT import MedViT
+from model_zoo.swin.model import SwinTransformer
 import random
 import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
@@ -120,6 +121,7 @@ def main(args):
         #     num_classes=3,
         #     pretrained=args.pretrain_path
         # ),
+        'swin': lambda: SwinTransformer(img_size=args.img_size, num_classes=3),
         'convnext': lambda: ConvNeXtBTXRD(num_classes=3),
         'efficientnetb0': lambda: EfficientNetBTXRD(num_classes=3, dropout_p=args.dropout),
         'efficientnetb4': lambda: EfficientNetB4BTXRD(num_classes=3, dropout_p=args.dropout),
