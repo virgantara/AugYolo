@@ -17,6 +17,8 @@ from models import (
     EfficientNetB4BTXRD,
     ResNet50
 )
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from model_zoo.medvit.MedViT import MedVit
 from model_zoo.swin.model import SwinTransformer
