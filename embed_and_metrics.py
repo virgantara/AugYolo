@@ -332,4 +332,16 @@ def main():
     print(cluster_df.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
 
     # simpan CSV bila diminta
-    if
+    if args.save_csv_prefix:
+        os.makedirs(os.path.dirname(args.save_csv_prefix), exist_ok=True)
+        cluster_df.to_csv(args.save_csv_prefix + "_cluster.csv", index=False)
+        pd.concat(perclass_all, ignore_index=True).to_csv(args.save_csv_prefix + "_perclass.csv", index=False)
+        print(f"Saved: {args.save_csv_prefix}_cluster.csv and {args.save_csv_prefix}_perclass.csv")
+
+    # plot grid (jika diminta)
+    if args.save_plot:
+        plot_grid(embeds2d, labels_map, class_names, out_path=args.save_plot,
+                  title_suffix=f"({args.method.upper()})")
+
+if __name__ == "__main__":
+    main()
