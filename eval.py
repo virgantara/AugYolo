@@ -8,6 +8,10 @@ from util import top_k_accuracy, append_row_to_excel, FocalCE, CLAHE
 import torch.nn as nn
 from torchvision import models
 from tqdm import tqdm
+
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+
 from models_yolo import (ClassificationModel)
 
 from models import (
@@ -17,10 +21,8 @@ from models import (
     EfficientNetB4BTXRD,
     ResNet50
 )
-import sys, os
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-from model_zoo.medvit.MedViT import MedVit
+from model_zoo.medvit.MedViT import MedViT
 from model_zoo.swin.model import SwinTransformer
 from model_zoo.swin.modelv2 import SwinTransformerV2
 import random
