@@ -19,6 +19,8 @@ from models import (
 )
 
 from model_zoo.medvit.MedViT import MedVit
+from model_zoo.swin.model import SwinTransformer
+from model_zoo.swin.modelv2 import SwinTransformerV2
 import random
 import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
@@ -157,6 +159,7 @@ def main(args):
         #     num_classes=3,
         #     pretrained=args.pretrain_path
         # ),
+        'swin': lambda: SwinTransformer(img_size=args.img_size, num_classes=3, patch_size=args.patch_size, window_size=args.window_size),
         'convnext': lambda: ConvNeXtBTXRD(num_classes=3),
         'efficientnetb0': lambda: EfficientNetBTXRD(num_classes=3, dropout_p=args.dropout),
         'efficientnetb4': lambda: EfficientNetB4BTXRD(num_classes=3, dropout_p=args.dropout),
@@ -312,7 +315,8 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
     parser.add_argument('--scenario', default='A', type=str,help='A=no clahe, B=clahe as weak aug, C=clahe as preprocessing')
-    
+    parser.add_argument('--patch_size', type=int, default=4,help='Patch Size for Swin')
+    parser.add_argument('--window_size', type=int, default=7,help='Window Size for Swin')
     parser.add_argument('--img_size', type=int, default=608, metavar='img_size',
                         help='Size of input image)')
     parser.add_argument('--model_path', type=str, default='checkpoints/exp/best_model.pth', metavar='N',
