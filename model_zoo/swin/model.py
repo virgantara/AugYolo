@@ -615,10 +615,10 @@ class SwinTransformer(nn.Module):
 
 
 if __name__ == '__main__':
-    img_size = 224
+    img_size = 600
     data = torch.rand(2,3,img_size,img_size)
     
-    model = SwinTransformer(img_size=img_size, num_classes=3)
+    model = SwinTransformer(img_size=img_size, num_classes=3,patch_size=5, window_size=5)
     
     output = model(data)
     print(output.size())
