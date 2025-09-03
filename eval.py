@@ -178,12 +178,8 @@ def main(args):
             norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 5, 27, 3])
         
         model.load_state_dict(torch.load(args.model_path, weights_only=True))
-    elif args.model_name == 'yolov11':
-        cfg = os.path.join('yolo/cfg','models','11',f'yolo11{args.yolo_scale}-cls.yaml')
-        model = ClassificationModel(cfg, nc=3, ch=3)
-        model.load_state_dict(torch.load(args.model_path, weights_only=True))
-    elif args.model_name == 'yolov8':
-        cfg = os.path.join('yolo/cfg','models','v8',f'yolov8{args.yolo_scale}-cls.yaml')
+    elif args.model_name == 'yolo':
+        cfg = args.path_yolo_yaml
         model = ClassificationModel(cfg, nc=3, ch=3)
         model.load_state_dict(torch.load(args.model_path, weights_only=True))
     elif args.model_name == 'medvit':
@@ -318,6 +314,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='BTXRD Classification')
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
+    parser.add_argument('--pretrain_path', type=str, default='pretrain/yolov8n-cls.pt', metavar='N',
+                        help='Yolo pretrain path')
+    parser.add_argument('--path_yolo_yaml', type=str, default='yolo/cfg/models/11/yolo11-cls-lka.yaml', metavar='N',
+                        help='Path of Yolo Yaml')
     parser.add_argument('--scenario', default='A', type=str,help='A=no clahe, B=clahe as weak aug, C=clahe as preprocessing')
     parser.add_argument('--patch_size', type=int, default=4,help='Patch Size for Swin')
     parser.add_argument('--window_size', type=int, default=7,help='Window Size for Swin')

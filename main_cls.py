@@ -373,9 +373,9 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
     parser.add_argument('--pretrain_path', type=str, default='pretrain/yolov8n-cls.pt', metavar='N',
-                        help='Name of the experiment')
+                        help='Yolo pretrain path')
     parser.add_argument('--path_yolo_yaml', type=str, default='yolo/cfg/models/11/yolo11-cls-lka.yaml', metavar='N',
-                        help='Name of the experiment')
+                        help='Path of Yolo Yaml')
     parser.add_argument('--model_name', type=str, default='convnext', metavar='N',
                         help='Name of the model')
     parser.add_argument('--yolo_scale', default='n', choices=['n','s','m','l','x'])
