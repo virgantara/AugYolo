@@ -30,6 +30,4 @@ backbone:
 
 # YOLOv5 v6.0 head
 head:
-  - [-1, 1, nn.AdaptiveAvgPool2d, [1]]  # global average pooling -> [N, C, 1, 1]
-  - [-1, 1, nn.Flatten, []]             # flatten -> [N, C]
-  - [-1, 1, Linear, [nc]]               # final classifier layer
+  - [-1, 1, Classify, [nc]] # Classify
