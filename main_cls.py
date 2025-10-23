@@ -29,7 +29,7 @@ from model_zoo.swin.modelv2 import SwinTransformerV2
 import random
 import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
-from van import VAN, load_model_weights
+from model_zoo.van.van import VAN, load_model_weights
 from timm.models.vision_transformer import _cfg
 from functools import partial
 from transforms_factory import build_transforms
