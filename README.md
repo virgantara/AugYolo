@@ -95,7 +95,7 @@ python main_cls.py \
 
 ### Best Scenario
 ```bash
-python eval_only.py --exp_name=exp_yolov8_ep300_600x600_sceG --pretrain_path=checkpoints/exp_yolov8_ep300_600x600_sceG/best_model.pth --model_name=yolo --path_yolo_yaml=yolo/cfg/models/v8/yolov8-cls.yaml --scenario=G --seed=42 
+bash run_eval.sh 
 ```
 4. Scenario D (Wavelet-only)
 ```bash
