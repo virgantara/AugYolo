@@ -177,8 +177,18 @@ def validate(model, dataloader, criterion, device):
 
     # --- Plot ROC Curve ---
     plt.figure(figsize=(8, 6))
+    plt.rcParams.update({
+        'font.size': 12,
+        'axes.titlesize': 14,
+        'axes.labelsize': 13,
+        'legend.fontsize': 11,
+        'xtick.labelsize': 11,
+        'ytick.labelsize': 11
+    })
+
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c']
     class_names = ['Normal', 'Benign', 'Malignant']
+
     for i, color in zip(range(n_classes), colors):
         plt.plot(fpr[i], tpr[i], color=color, lw=2,
                  label=f'{class_names[i]} (AUC = {roc_auc[i]:.3f})')
@@ -194,20 +204,12 @@ def validate(model, dataloader, criterion, device):
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.title('Receiver Operating Characteristic (ROC)')
-    plt.legend(loc="lower right")
+    plt.legend(loc="lower right", frameon=False)
     os.makedirs("results", exist_ok=True)
     roc_path = os.path.join("results", f"roc_curve_{args.exp_name}.png")
+    plt.tight_layout()
     plt.savefig(roc_path, dpi=300)
     plt.close()
-
-    print(f"\nROC curves saved to: {roc_path}")
-    print("Per-class AUC:")
-    for i, name in enumerate(class_names):
-        print(f"  {name}: {roc_auc[i]:.4f}")
-    print(f"Micro-average AUC: {roc_auc['micro']:.4f}")
-    print(f"Macro-average AUC: {roc_auc['macro']:.4f}")
-
-    return epoch_loss, top1_acc, top5_acc
     return epoch_loss, top1_acc, top5_acc
 
 
