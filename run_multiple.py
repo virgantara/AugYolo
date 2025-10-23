@@ -12,7 +12,7 @@ print("\nRunning Baseline Yolov8 model...")
 for seed in seeds:
     result = subprocess.check_output([
         "python", "main_cls.py",
-        "--exp_name", f"exp_yolov8_ep300_600x600_sceG_{seed}",
+        "--exp_name", f"exp_yolov8_baseline_{seed}",
         "--img_size", "600",
         "--model_name", "yolo",
         "--seed", str(seed),
