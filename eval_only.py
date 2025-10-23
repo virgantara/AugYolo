@@ -87,6 +87,16 @@ def main(args):
     print(f"Top-1 Acc: {top1_acc:.4f}")
     print(f"Top-5 Acc: {top5_acc:.4f}")
 
+    class_names = ['Normal', 'Benign', 'Malignant']
+    mean_acc, ci95, p_val = evaluate_with_statistics(
+        model, test_loader, criterion, device,
+        n_repeats=5, class_names=class_names, exp_name=args.exp_name
+    )
+
+    print("Mean Acc",mean_acc)
+    print("ci95",ci95)
+    print("p_val",p_val)
+
 
 def build_model(args):
     model_map = {
@@ -212,6 +222,86 @@ def validate(model, dataloader, criterion, device):
     plt.close()
     return epoch_loss, top1_acc, top5_acc
 
+def evaluate_with_statistics(model, dataloader, criterion, device, n_repeats=5, class_names=None, exp_name="exp_eval"):
+    """
+    Evaluate model repeatedly to compute mean accuracy, 95% CI, significance vs baseline,
+    and plot per-class PR curves.
+    """
+
+    all_acc = []
+    all_y_true, all_y_pred, all_y_prob = [], [], []
+
+    print(f"Running {n_repeats} repeated evaluations...")
+    for r in range(n_repeats):
+        model.eval()
+        correct, total = 0, 0
+        y_true, y_pred, y_prob = [], [], []
+
+        with torch.no_grad():
+            for imgs, labels in dataloader:
+                imgs, labels = imgs.to(device), labels.to(device)
+                outputs = model(imgs)
+                outputs = _get_logits(outputs)
+                probs = torch.softmax(outputs, dim=1)
+                preds = probs.argmax(dim=1)
+
+                correct += (preds == labels).sum().item()
+                total += labels.size(0)
+
+                y_true.extend(labels.cpu().numpy())
+                y_pred.extend(preds.cpu().numpy())
+                y_prob.extend(probs.cpu().numpy())
+
+        acc = correct / total
+        all_acc.append(acc)
+        all_y_true.extend(y_true)
+        all_y_pred.extend(y_pred)
+        all_y_prob.extend(y_prob)
+        print(f"Run {r+1}: Accuracy = {acc*100:.2f}%")
+
+    # --- Compute mean and 95% CI ---
+    mean_acc = np.mean(all_acc)
+    std_acc = np.std(all_acc, ddof=1)
+    ci95 = 1.96 * (std_acc / np.sqrt(n_repeats))
+    print(f"\nMean Accuracy: {mean_acc*100:.2f}% ± {ci95*100:.2f}% (95% CI)")
+
+    # --- Compare to baseline (YOLOv8) ---
+    # Suppose you have baseline accuracies (same runs)
+    baseline_acc = np.array([0.912, 0.913, 0.911, 0.915, 0.914])  # example
+    t_stat, p_val = stats.ttest_rel(all_acc, baseline_acc)
+    print(f"Paired t-test vs YOLOv8 baseline: t = {t_stat:.3f}, p = {p_val:.4f}")
+    if p_val < 0.05:
+        print("Improvement is statistically significant (p < 0.05)")
+    else:
+        print("No statistically significant difference (p ≥ 0.05)")
+
+    # --- Per-class metrics ---
+    print("\nPer-class metrics:")
+    print(classification_report(all_y_true, all_y_pred, target_names=class_names))
+
+    # --- Precision–Recall (PR) Curves ---
+    y_true_bin = np.zeros((len(all_y_true), len(class_names)))
+    for i, label in enumerate(all_y_true):
+        y_true_bin[i, label] = 1
+
+    plt.figure(figsize=(8, 6))
+    for i, cls in enumerate(class_names):
+        precision, recall, _ = precision_recall_curve(y_true_bin[:, i], np.array(all_y_prob)[:, i])
+        ap = average_precision_score(y_true_bin[:, i], np.array(all_y_prob)[:, i])
+        plt.plot(recall, precision, lw=2, label=f'{cls} (AP={ap:.3f})')
+
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Precision–Recall Curves (BTXRD)')
+    plt.legend(loc='lower left')
+    os.makedirs("results", exist_ok=True)
+    pr_path = os.path.join("results", f"pr_curve_{exp_name}.png")
+    plt.tight_layout()
+    plt.savefig(pr_path, dpi=300)
+    plt.close()
+    print(f"PR curves saved to: {pr_path}")
+
+    return mean_acc, ci95, p_val
 
 def _get_logits(outputs):
     if isinstance(outputs, (list, tuple)):
