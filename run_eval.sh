@@ -6,6 +6,7 @@ python eval_only.py \
   --test_batch_size=16 \
   --seed=42 \
   --scenario=G \
+  --path_yolo_yaml=yolo/cfg/models/v8/yolov8-cls.yaml\
   --use_clahe --clahe_p=0.25 \
   --use_wavelet --wavelet_name=db2 --wavelet_level=1 --wavelet_p=1.0 \
   --use_unsharp --unsharp_amount=0.5 --unsharp_radius=0.8 --unsharp_threshold=2 --unsharp_p=1.0
