@@ -1,0 +1,11 @@
+python eval_only.py \
+  --exp_name=exp_yolov8_ep300_600x600_sceG \
+  --img_size=600 \
+  --pretrain_path=checkpoints/exp_yolov8_ep300_600x600_sceG/best_model.pth \
+  --model_name=yolov8 \
+  --test_batch_size=16 \
+  --seed=42 \
+  --scenario=G \
+  --use_clahe --clahe_p=0.25 \
+  --use_wavelet --wavelet_name=db2 --wavelet_level=1 --wavelet_p=1.0 \
+  --use_unsharp --unsharp_amount=0.5 --unsharp_radius=0.8 --unsharp_threshold=2 --unsharp_p=1.0
