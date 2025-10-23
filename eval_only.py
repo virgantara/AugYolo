@@ -249,6 +249,27 @@ if __name__ == "__main__":
     parser.add_argument('--dropout', type=float, default=0.2)
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--use_center_dataset_split', action='store_true')
+    parser.add_argument('--use_clahe', action='store_true')
+
+    parser.add_argument('--clahe_p', type=float, default=0.25)
+
+    # Wavelet toggles
+    parser.add_argument('--use_wavelet', action='store_true')
+    parser.add_argument('--wavelet_name', type=str, default='db2')
+    parser.add_argument('--wavelet_level', type=int, default=2)
+    parser.add_argument('--wavelet_p', type=float, default=1.0)  # 1.0 => deterministic preprocessing
+
+    # Unsharp toggles
+    parser.add_argument('--use_unsharp', action='store_true')
+    parser.add_argument('--unsharp_amount', type=float, default=0.7)
+    parser.add_argument('--unsharp_radius', type=float, default=1.0)
+    parser.add_argument('--unsharp_threshold', type=int, default=2)
+    parser.add_argument('--unsharp_p', type=float, default=1.0)
+
+    parser.add_argument('--use_center_dataset_split', action='store_true', default=False, help='Use Center 1,2 as train, 3 as test')
+
+    # Structure map (optional)
+    parser.add_argument('--use_structuremap', action='store_true')
     args = parser.parse_args()
 
     main(args)
