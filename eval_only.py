@@ -248,7 +248,6 @@ if __name__ == "__main__":
     parser.add_argument('--num_worker', type=int, default=4)
     parser.add_argument('--dropout', type=float, default=0.2)
     parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--use_center_dataset_split', action='store_true')
     parser.add_argument('--use_clahe', action='store_true')
 
     parser.add_argument('--clahe_p', type=float, default=0.25)
