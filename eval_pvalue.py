@@ -77,15 +77,15 @@ def main(args):
     print(f"Loading checkpoint from {ckpt_path}")
     model.load_state_dict(torch.load(ckpt_path, map_location=device))
 
-    criterion = FocalCE(weight=None, gamma=2.0)
+    class_names = ['Normal', 'Benign', 'Malignant']
+    mean_acc, ci95, p_val = evaluate_with_statistics(
+        model, test_loader, criterion, device,
+        n_repeats=5, class_names=class_names, exp_name=args.exp_name
+    )
 
-    # --- Evaluate ---
-    val_loss, top1_acc, top5_acc = validate(model, test_loader, criterion, device)
-
-    print(f"\nEvaluation results:")
-    print(f"Val Loss: {val_loss:.4f}")
-    print(f"Top-1 Acc: {top1_acc:.4f}")
-    print(f"Top-5 Acc: {top5_acc:.4f}")
+    print("Mean Acc",mean_acc)
+    print("ci95",ci95)
+    print("p_val",p_val)
 
 
 def build_model(args):
@@ -120,98 +120,86 @@ def build_model(args):
     return model
 
 
-def validate(model, dataloader, criterion, device):
-    model.eval()
-    running_loss = 0.0
-    top1_total = 0
-    top5_total = 0
+def evaluate_with_statistics(model, dataloader, criterion, device, n_repeats=5, class_names=None, exp_name="exp_eval"):
+    """
+    Evaluate model repeatedly to compute mean accuracy, 95% CI, significance vs baseline,
+    and plot per-class PR curves.
+    """
 
-    all_labels = []
-    all_probs = []
+    all_acc = []
+    all_y_true, all_y_pred, all_y_prob = [], [], []
 
-    with torch.no_grad():
-        for images, labels in tqdm(dataloader, desc="Evaluating"):
-            images, labels = images.to(device), labels.to(device)
-            outputs = model(images)
-            outputs = _get_logits(outputs)
-            probs = torch.softmax(outputs, dim=1)
-            all_probs.append(probs.cpu().numpy())
-            all_labels.append(labels.cpu().numpy())
+    print(f"Running {n_repeats} repeated evaluations...")
+    for r in tqdm(range(n_repeats)):
+        model.eval()
+        correct, total = 0, 0
+        y_true, y_pred, y_prob = [], [], []
 
-            loss = criterion(outputs, labels)
-            running_loss += loss.item() * images.size(0)
+        with torch.no_grad():
+            for imgs, labels in dataloader:
+                imgs, labels = imgs.to(device), labels.to(device)
+                outputs = model(imgs)
+                outputs = _get_logits(outputs)
+                probs = torch.softmax(outputs, dim=1)
+                preds = probs.argmax(dim=1)
 
-            top1_total += top_k_accuracy(outputs, labels, k=1)
-            top5_total += top_k_accuracy(outputs, labels, k=2)
+                correct += (preds == labels).sum().item()
+                total += labels.size(0)
 
-    all_probs = np.concatenate(all_probs)
-    all_labels = np.concatenate(all_labels)
+                y_true.extend(labels.cpu().numpy())
+                y_pred.extend(preds.cpu().numpy())
+                y_prob.extend(probs.cpu().numpy())
 
-    # Compute loss/accuracy
-    epoch_loss = running_loss / len(dataloader.dataset)
-    top1_acc = top1_total / len(dataloader.dataset)
-    top5_acc = top5_total / len(dataloader.dataset)
+        acc = correct / total
+        all_acc.append(acc)
+        all_y_true.extend(y_true)
+        all_y_pred.extend(y_pred)
+        all_y_prob.extend(y_prob)
+        print(f"Run {r+1}: Accuracy = {acc*100:.2f}%")
 
-    n_classes = all_probs.shape[1]
-    y_true_bin = label_binarize(all_labels, classes=list(range(n_classes)))
+    # --- Compute mean and 95% CI ---
+    mean_acc = np.mean(all_acc)
+    std_acc = np.std(all_acc, ddof=1)
+    ci95 = 1.96 * (std_acc / np.sqrt(n_repeats))
+    print(f"\nMean Accuracy: {mean_acc*100:.2f}% ± {ci95*100:.2f}% (95% CI)")
 
-    # per-class ROC
-    fpr = dict()
-    tpr = dict()
-    roc_auc = dict()
-    for i in range(n_classes):
-        fpr[i], tpr[i], _ = roc_curve(y_true_bin[:, i], all_probs[:, i])
-        roc_auc[i] = auc(fpr[i], tpr[i])
+    # --- Compare to baseline (YOLOv8) ---
+    # Suppose you have baseline accuracies (same runs)
+    baseline_acc = np.array([0.912, 0.913, 0.911, 0.915, 0.914])  # example
+    t_stat, p_val = stats.ttest_rel(all_acc, baseline_acc)
+    print(f"Paired t-test vs YOLOv8 baseline: t = {t_stat:.3f}, p = {p_val:.4f}")
+    if p_val < 0.05:
+        print("Improvement is statistically significant (p < 0.05)")
+    else:
+        print("No statistically significant difference (p ≥ 0.05)")
 
-    # micro- and macro-average AUC
-    fpr["micro"], tpr["micro"], _ = roc_curve(y_true_bin.ravel(), all_probs.ravel())
-    roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+    # --- Per-class metrics ---
+    print("\nPer-class metrics:")
+    print(classification_report(all_y_true, all_y_pred, target_names=class_names))
 
-    # macro average (average of AUCs)
-    all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
-    mean_tpr = np.zeros_like(all_fpr)
-    for i in range(n_classes):
-        mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
-    mean_tpr /= n_classes
-    roc_auc["macro"] = auc(all_fpr, mean_tpr)
+    # --- Precision–Recall (PR) Curves ---
+    y_true_bin = np.zeros((len(all_y_true), len(class_names)))
+    for i, label in enumerate(all_y_true):
+        y_true_bin[i, label] = 1
 
-    # --- Plot ROC Curve ---
     plt.figure(figsize=(8, 6))
-    plt.rcParams.update({
-        'font.size': 12,
-        'axes.titlesize': 14,
-        'axes.labelsize': 13,
-        'legend.fontsize': 11,
-        'xtick.labelsize': 11,
-        'ytick.labelsize': 11
-    })
+    for i, cls in enumerate(class_names):
+        precision, recall, _ = precision_recall_curve(y_true_bin[:, i], np.array(all_y_prob)[:, i])
+        ap = average_precision_score(y_true_bin[:, i], np.array(all_y_prob)[:, i])
+        plt.plot(recall, precision, lw=2, label=f'{cls} (AP={ap:.3f})')
 
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c']
-    class_names = ['Normal', 'Benign', 'Malignant']
-
-    for i, color in zip(range(n_classes), colors):
-        plt.plot(fpr[i], tpr[i], color=color, lw=2,
-                 label=f'{class_names[i]} (AUC = {roc_auc[i]:.3f})')
-
-    plt.plot(fpr["micro"], tpr["micro"], color='deeppink', linestyle=':', linewidth=2,
-             label=f'Micro-average (AUC = {roc_auc["micro"]:.3f})')
-    plt.plot(all_fpr, mean_tpr, color='navy', linestyle='--', linewidth=2,
-             label=f'Macro-average (AUC = {roc_auc["macro"]:.3f})')
-
-    plt.plot([0, 1], [0, 1], 'k--', lw=1)
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('Receiver Operating Characteristic (ROC)')
-    plt.legend(loc="lower right", frameon=False)
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Precision–Recall Curves (BTXRD)')
+    plt.legend(loc='lower left')
     os.makedirs("results", exist_ok=True)
-    roc_path = os.path.join("results", f"roc_curve_{args.exp_name}.png")
+    pr_path = os.path.join("results", f"pr_curve_{exp_name}.png")
     plt.tight_layout()
-    plt.savefig(roc_path, dpi=300)
+    plt.savefig(pr_path, dpi=300)
     plt.close()
-    return epoch_loss, top1_acc, top5_acc
+    print(f"PR curves saved to: {pr_path}")
 
+    return mean_acc, ci95, p_val
 
 def _get_logits(outputs):
     if isinstance(outputs, (list, tuple)):

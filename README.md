@@ -80,7 +80,7 @@ python main_cls.py \
   --exp_name=exp_yolov8_ep300_600x600_sceG \
   --img_size=600 \
   --epochs=300 \
-  --model_name=yolov8 \
+  --model_name=yolo \
   --batch_size=16 \
   --test_batch_size=16 \
   --seed=42 \
