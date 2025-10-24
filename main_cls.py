@@ -293,7 +293,7 @@ def train_one_epoch(model, epoch, dataloader, optimizer, criterion, device):
     model.train()
     running_loss = 0.0
 
-    for images, labels in tqdm(dataloader, desc="Training "+epoch):
+    for images, labels in tqdm(dataloader, desc="Training "+str(epoch)):
         images, labels = images.to(device), labels.to(device)
 
         optimizer.zero_grad()
