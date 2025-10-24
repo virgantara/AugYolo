@@ -248,7 +248,7 @@ def main(args):
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch+1}/{num_epochs}")
 
-        train_loss = train_one_epoch(model, train_loader, optimizer, criterion, device)
+        train_loss = train_one_epoch(model, epoch, train_loader, optimizer, criterion, device)
         val_loss, top1_acc, top5_acc = validate(model, test_loader, criterion, device)
         scheduler.step()
         print(f"Train Loss: {train_loss:.4f}")
@@ -289,11 +289,11 @@ def main(args):
 
 
 
-def train_one_epoch(model, dataloader, optimizer, criterion, device):
+def train_one_epoch(model, epoch, dataloader, optimizer, criterion, device):
     model.train()
     running_loss = 0.0
 
-    for images, labels in tqdm(dataloader, desc="Training"):
+    for images, labels in tqdm(dataloader, desc="Training "+epoch):
         images, labels = images.to(device), labels.to(device)
 
         optimizer.zero_grad()

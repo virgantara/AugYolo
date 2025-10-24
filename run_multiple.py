@@ -2,30 +2,30 @@ import subprocess
 import numpy as np
 from scipy.stats import ttest_rel
 
-seeds = [42, 43, 44, 45, 46]
+seeds = [45, 46]
 baseline_scores = []
 our_scores = []
 
 
 # Run BeyondRPC
-print("\nRunning Baseline Yolov8 model...")
-for seed in seeds:
-    result = subprocess.check_output([
-        "python", "main_cls.py",
-        "--exp_name", f"exp_yolov8_baseline_{seed}",
-        "--img_size", "600",
-        "--model_name", "yolo",
-        "--path_yolo_yaml","yolo/cfg/models/v8/yolov8-cls.yaml",
-        "--seed", str(seed),
-        "--pretrain_path", "pretrain/yolov8n-cls.pt",
-        "--epochs", "300",
-        "--batch_size","16",
-        "--test_batch_size","16"
-    ])
+# print("\nRunning Baseline Yolov8 model...")
+# for seed in seeds:
+#     result = subprocess.check_output([
+#         "python", "main_cls.py",
+#         "--exp_name", f"exp_yolov8_baseline_{seed}",
+#         "--img_size", "600",
+#         "--model_name", "yolo",
+#         "--path_yolo_yaml","yolo/cfg/models/v8/yolov8-cls.yaml",
+#         "--seed", str(seed),
+#         "--pretrain_path", "pretrain/yolov8n-cls.pt",
+#         "--epochs", "300",
+#         "--batch_size","16",
+#         "--test_batch_size","16"
+#     ])
 
-    print(f"Yolobaseline_seed{seed} Result: ",result)
-    # acc = float(result.decode().split("acc:")[-1].split(",")[0].strip())
-    # beyondrpc_scores.append(acc)
+#     print(f"Yolobaseline_seed{seed} Result: ",result)
+#     # acc = float(result.decode().split("acc:")[-1].split(",")[0].strip())
+#     # beyondrpc_scores.append(acc)
 
 print("\nRunning Our model...")
 for seed in seeds:
