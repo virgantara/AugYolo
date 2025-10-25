@@ -149,9 +149,11 @@ def validate(model, dataloader, criterion, device):
             outputs = model(images)
             outputs = _get_logits(outputs)
             probs = torch.softmax(outputs, dim=1)
+            preds = torch.argmax(probs, dim=1)
+            
             all_probs.append(probs.cpu().numpy())
             all_labels.append(labels.cpu().numpy())
-            all_probs.append(probs.cpu().numpy())
+            all_preds.append(preds.cpu().numpy())
 
             loss = criterion(outputs, labels)
             running_loss += loss.item() * images.size(0)
