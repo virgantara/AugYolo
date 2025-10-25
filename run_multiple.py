@@ -2,7 +2,7 @@ import subprocess
 import numpy as np
 from scipy.stats import ttest_rel
 
-seeds = [45, 46]
+seeds = [43, 44]
 baseline_scores = []
 our_scores = []
 
