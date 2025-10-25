@@ -95,10 +95,7 @@ def main(args):
     for k, v in metrics.items():
         print(f"{k.capitalize():<15}: {v:.4f}")
 
-    print(f"\nEvaluation results:")
-    print(f"Val Loss: {val_loss:.4f}")
-    print(f"Top-1 Acc: {top1_acc:.4f}")
-    print(f"Top-5 Acc: {top5_acc:.4f}")
+    
 
 
 def build_model(args):
@@ -150,7 +147,7 @@ def validate(model, dataloader, criterion, device):
             outputs = _get_logits(outputs)
             probs = torch.softmax(outputs, dim=1)
             preds = torch.argmax(probs, dim=1)
-            
+
             all_probs.append(probs.cpu().numpy())
             all_labels.append(labels.cpu().numpy())
             all_preds.append(preds.cpu().numpy())
