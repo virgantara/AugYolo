@@ -111,3 +111,14 @@ python eval.py --exp_name=exp_yolov8_ep300_600x600_sceE --img_size=600  --model_
 python main_cls.py --exp_name=exp_yolov8_ep300_600x600_sceF --img_size=600 --epochs=300 --model_name=yolov8 --batch_size=16 --test_batch_size=16 --seed=42 --scenario=F --use_wavelet --wavelet_p 1.0 --use_unsharp --unsharp_p 1.0
 ```
 
+### Baseline
+```bash
+python eval_only.py \
+  --exp_name=exp_yolov8_baseline_42 \
+  --img_size=600 \
+  --pretrain_path=checkpoints/exp_yolov8_baseline_42/best_model.pth \
+  --model_name=yolo \
+  --test_batch_size=16 \
+  --seed=42 \
+  --path_yolo_yaml=yolo/cfg/models/v8/yolov8-cls.yaml
+```

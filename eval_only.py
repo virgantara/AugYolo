@@ -25,7 +25,16 @@ from transforms_factory import build_transforms
 import numpy as np
 import random
 import sys
-from sklearn.metrics import roc_auc_score, roc_curve, auc
+from sklearn.metrics import (
+    roc_auc_score, 
+    roc_curve, 
+    auc,
+    precision_score,
+    recall_score,
+    f1_score,
+    classification_report,
+    confusion_matrix
+)
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import label_binarize
 
@@ -80,7 +89,11 @@ def main(args):
     criterion = FocalCE(weight=None, gamma=2.0)
 
     # --- Evaluate ---
-    val_loss, top1_acc, top5_acc = validate(model, test_loader, criterion, device)
+    metrics = validate(model, test_loader, criterion, device)
+
+    print("\nEvaluation results:")
+    for k, v in metrics.items():
+        print(f"{k.capitalize():<15}: {v:.4f}")
 
     print(f"\nEvaluation results:")
     print(f"Val Loss: {val_loss:.4f}")
@@ -128,6 +141,7 @@ def validate(model, dataloader, criterion, device):
 
     all_labels = []
     all_probs = []
+    all_preds = []
 
     with torch.no_grad():
         for images, labels in tqdm(dataloader, desc="Evaluating"):
@@ -137,6 +151,7 @@ def validate(model, dataloader, criterion, device):
             probs = torch.softmax(outputs, dim=1)
             all_probs.append(probs.cpu().numpy())
             all_labels.append(labels.cpu().numpy())
+            all_probs.append(probs.cpu().numpy())
 
             loss = criterion(outputs, labels)
             running_loss += loss.item() * images.size(0)
@@ -146,11 +161,28 @@ def validate(model, dataloader, criterion, device):
 
     all_probs = np.concatenate(all_probs)
     all_labels = np.concatenate(all_labels)
+    all_preds = np.concatenate(all_preds)
 
     # Compute loss/accuracy
     epoch_loss = running_loss / len(dataloader.dataset)
     top1_acc = top1_total / len(dataloader.dataset)
     top5_acc = top5_total / len(dataloader.dataset)
+
+    macro_prec = precision_score(all_labels, all_preds, average='macro', zero_division=0)
+    macro_recall = recall_score(all_labels, all_preds, average='macro', zero_division=0)
+    macro_f1 = f1_score(all_labels, all_preds, average='macro', zero_division=0)
+
+    print("\nPer-class metrics:")
+    print(classification_report(all_labels, all_preds, digits=4, zero_division=0))
+
+    print(f"\nMacro Precision: {macro_prec:.4f}")
+    print(f"Macro Recall:    {macro_recall:.4f}")
+    print(f"Macro F1-score:  {macro_f1:.4f}")
+
+    # --- Confusion Matrix (optional) ---
+    cm = confusion_matrix(all_labels, all_preds)
+    print("\nConfusion Matrix:")
+    print(cm)
 
     n_classes = all_probs.shape[1]
     y_true_bin = label_binarize(all_labels, classes=list(range(n_classes)))
@@ -210,7 +242,16 @@ def validate(model, dataloader, criterion, device):
     plt.tight_layout()
     plt.savefig(roc_path, dpi=300)
     plt.close()
-    return epoch_loss, top1_acc, top5_acc
+    return {
+        "loss": epoch_loss,
+        "top1": top1_acc,
+        "top5": top5_acc,
+        "precision": macro_prec,
+        "recall": macro_recall,
+        "f1": macro_f1,
+        "roc_auc_macro": roc_auc["macro"],
+        "roc_auc_micro": roc_auc["micro"]
+    }
 
 
 def _get_logits(outputs):
